@@ -62,8 +62,6 @@ def test_registry_serialises_to_json():
     assert data["modules"] == []
 
 
-import json
-from pathlib import Path
 from app.services.registry import (
     load_registry,
     save_registry,
@@ -71,7 +69,6 @@ from app.services.registry import (
     set_module_active,
     merge_remote_manifest,
 )
-from app.models.registry import Module, Registry
 
 
 # ── helpers ──────────────────────────────────────────────

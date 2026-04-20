@@ -1,5 +1,4 @@
 from __future__ import annotations
-import json
 from typing import Any
 from app.config import Settings
 from app.models.registry import Module, Registry
