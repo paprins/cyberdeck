@@ -1,0 +1,17 @@
+[Unit]
+Description=Kiwix ZIM Content Server
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+ExecStart=/usr/bin/kiwix-serve \
+    --port 8080 \
+    --library /data/zim/library.xml
+Restart=on-failure
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

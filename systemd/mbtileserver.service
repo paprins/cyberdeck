@@ -1,0 +1,18 @@
+[Unit]
+Description=MBTiles Map Tile Server
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+ExecStart=/usr/local/bin/mbtileserver \
+    --port 8081 \
+    --dir /data/maps \
+    --enable-reload-signal
+Restart=on-failure
+RestartSec=5
+Nice=10
+
+[Install]
+WantedBy=multi-user.target

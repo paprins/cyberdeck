@@ -1,0 +1,19 @@
+[Unit]
+Description=Cyberdeck Portal
+After=network.target
+Wants=kiwix.service mbtileserver.service
+
+[Service]
+Type=simple
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/cyberdeck
+ExecStart=/home/pi/cyberdeck/.venv/bin/uvicorn app.main:app \
+    --host 127.0.0.1 --port 8000 --workers 1
+Restart=on-failure
+RestartSec=5
+Nice=10
+Environment=CYBERDECK_DATA_DIR=/data
+
+[Install]
+WantedBy=multi-user.target
