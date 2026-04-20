@@ -5,9 +5,6 @@ from fastapi.responses import JSONResponse
 from app.config import Settings
 from app.services.registry import load_registry
 
-_settings: Settings | None = None
-
-
 def create_app(settings: Settings | None = None) -> FastAPI:
     cfg = settings or Settings()
 

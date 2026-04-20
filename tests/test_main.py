@@ -40,3 +40,4 @@ async def test_status_data_dirs_listed(client):
 async def test_404_returns_json(client):
     r = await client.get("/nonexistent")
     assert r.status_code == 404
+    assert r.json() == {"error": "not found"}
