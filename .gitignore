@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+dist/
+*.egg-info/
+data/zim/
+data/maps/
+data/downloads/
+!data/packages/registry.json
+.env
