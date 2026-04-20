@@ -1,6 +1,14 @@
+import os
 import pytest
 from pathlib import Path
 from app.config import Settings
+
+
+@pytest.fixture(autouse=True)
+def clean_cyberdeck_env(monkeypatch):
+    for key in list(os.environ):
+        if key.startswith("CYBERDECK_"):
+            monkeypatch.delenv(key)
 
 
 @pytest.fixture
