@@ -6,6 +6,7 @@ data/zim/
 data/maps/
 data/downloads/
 !data/packages/registry.json
+.superpowers/
 
 ### macOS ###
 # General
