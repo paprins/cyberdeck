@@ -1,0 +1,414 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=B612:wght@400;700&family=Atkinson+Hyperlegible:wght@400;700&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+.cd-wrap {
+  --bg:       oklch(12% 0.008 110);
+  --tile:     oklch(19% 0.012 110);
+  --tile-hi:  oklch(23% 0.014 110);
+  --border:   oklch(28% 0.012 110);
+  --text:     oklch(90% 0.006 110);
+  --muted:    oklch(50% 0.01 110);
+  --radius:   22px;
+  --gap:      10px;
+
+  --c-medical:  oklch(66% 0.15 28);
+  --c-maps:     oklch(60% 0.12 148);
+  --c-survival: oklch(66% 0.13 52);
+  --c-food:     oklch(62% 0.11 128);
+  --c-encyclo:  oklch(64% 0.1 238);
+  --c-packages: oklch(56% 0.07 200);
+  --c-internet: oklch(68% 0.13 258);
+
+  font-family: 'B612', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  padding: 16px;
+  min-height: 400px;
+}
+
+/* chrome */
+.cd-chrome {
+  background: var(--tile);
+  border-radius: calc(var(--radius) + 8px);
+  overflow: hidden;
+  padding: 10px 14px 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.cd-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2px 0;
+}
+.cd-wordmark {
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 0.15em; text-transform: uppercase;
+}
+.cd-wordmark em { font-style: normal; color: var(--c-survival); }
+
+.cd-right {
+  display: flex; align-items: center; gap: 14px;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 10px; color: var(--muted);
+}
+.cd-bat {
+  display: flex; align-items: center; gap: 5px;
+}
+.cd-bat-shell {
+  width: 26px; height: 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 3px; position: relative; overflow: visible;
+}
+.cd-bat-shell::after {
+  content: ''; position: absolute;
+  right: -4px; top: 50%; transform: translateY(-50%);
+  width: 3px; height: 5px;
+  background: var(--border); border-radius: 0 1px 1px 0;
+}
+.cd-bat-fill {
+  position: absolute; inset: 2px;
+  width: 72%; background: var(--c-maps); border-radius: 1px;
+}
+
+.cd-searchbar {
+  background: var(--bg);
+  border-radius: 10px;
+  padding: 9px 14px;
+  display: flex; align-items: center; gap: 9px;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 12px; color: var(--muted);
+}
+.cd-search-hint {
+  margin-left: auto;
+  font-size: 9px; color: oklch(32% 0.01 110);
+  letter-spacing: 0.06em; text-transform: uppercase;
+}
+
+/* ── bento grid ── */
+.cd-bento {
+  display: grid;
+  gap: var(--gap);
+  padding-bottom: 14px;
+}
+
+/* 5-module layout */
+.cd-bento-5 {
+  grid-template-columns: repeat(5, 1fr);
+  grid-template-rows: 160px 110px 70px;
+  grid-template-areas:
+    "medical  medical  maps     maps     survival"
+    "food     food     encyclo  encyclo  survival"
+    "packages packages packages inet     inet";
+}
+
+/* 2-module layout */
+.cd-bento-2 {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 170px 70px;
+  grid-template-areas:
+    "medical  medical  maps     maps"
+    "packages packages inet     inet";
+}
+
+/* empty layout */
+.cd-bento-0 {
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: 160px 70px;
+  grid-template-areas:
+    "empty   empty   empty   empty"
+    "packages packages inet  inet";
+}
+
+/* ── tiles ── */
+.cd-tile {
+  background: var(--bg);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 12px;
+  cursor: pointer;
+  transition: background 0.12s, transform 0.1s;
+  position: relative;
+  overflow: hidden;
+  text-align: center;
+}
+.cd-tile:hover {
+  background: var(--tile-hi);
+  transform: scale(1.01);
+}
+
+.cd-tile-icon {
+  font-size: 32px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.cd-tile-name {
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+}
+.cd-tile-sub {
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 10px;
+  color: var(--muted);
+  line-height: 1.5;
+  max-width: 20ch;
+}
+.cd-tile-tag {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--muted);
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+}
+
+/* large tiles: bigger icon + name */
+.cd-tile-lg .cd-tile-icon { font-size: 44px; }
+.cd-tile-lg .cd-tile-name { font-size: 20px; }
+.cd-tile-lg .cd-tile-sub  { font-size: 11px; }
+
+/* tall tile: center slightly higher */
+.cd-tile-tall { justify-content: center; }
+
+/* small tile: compressed */
+.cd-tile-sm .cd-tile-icon { font-size: 22px; }
+.cd-tile-sm .cd-tile-name { font-size: 13px; }
+.cd-tile-sm gap: 4px;
+
+/* grid areas */
+.ga-medical  { grid-area: medical;  }
+.ga-maps     { grid-area: maps;     }
+.ga-survival { grid-area: survival; }
+.ga-food     { grid-area: food;     }
+.ga-encyclo  { grid-area: encyclo;  }
+.ga-packages { grid-area: packages; }
+.ga-inet     { grid-area: inet;     }
+.ga-empty    { grid-area: empty;    }
+
+/* accent colors */
+.t-medical  .cd-tile-name { color: var(--c-medical);  }
+.t-maps     .cd-tile-name { color: var(--c-maps);     }
+.t-survival .cd-tile-name { color: var(--c-survival); }
+.t-food     .cd-tile-name { color: var(--c-food);     }
+.t-encyclo  .cd-tile-name { color: var(--c-encyclo);  }
+.t-packages .cd-tile-name { color: var(--c-packages); }
+.t-inet     .cd-tile-name { color: var(--c-internet); }
+
+/* online indicator */
+.cd-online {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9px; font-weight: 700; text-transform: uppercase;
+  letter-spacing: 0.08em; color: var(--c-maps);
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+}
+.cd-online::before {
+  content: ''; width: 5px; height: 5px; border-radius: 50%;
+  background: var(--c-maps);
+  animation: pulse 2.4s ease-in-out infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.25} }
+
+/* empty state tile */
+.cd-empty-tile {
+  background: var(--bg);
+  border-radius: var(--radius);
+  border: 1.5px dashed var(--border);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 10px; text-align: center; padding: 24px;
+}
+.cd-empty-icon { font-size: 36px; opacity: 0.2; }
+.cd-empty-title {
+  font-size: 14px; font-weight: 700;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  opacity: 0.35;
+}
+.cd-empty-sub {
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 11px; color: var(--muted);
+  max-width: 38ch; line-height: 1.6;
+}
+.cd-empty-cta {
+  margin-top: 4px;
+  padding: 7px 18px;
+  border: 1px solid var(--c-packages);
+  border-radius: 6px;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.1em;
+  color: var(--c-packages);
+  cursor: pointer;
+}
+
+/* section labels outside frames */
+.cd-label {
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 10px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 0.12em;
+  color: oklch(40% 0.01 110);
+  margin: 24px 0 8px;
+}
+.cd-label:first-child { margin-top: 0; }
+</style>
+
+<!-- ═══════════════════════════════════════════════════
+     STATE A — No modules
+════════════════════════════════════════════════════ -->
+<div class="cd-label">State A — No modules activated</div>
+<div class="cd-wrap">
+  <div class="cd-chrome">
+    <div class="cd-topbar">
+      <div class="cd-wordmark">⬡ <em>CYBER</em>DECK</div>
+      <div class="cd-right">
+        <span>0 modules</span>
+        <div class="cd-bat">
+          <div class="cd-bat-shell"><div class="cd-bat-fill"></div></div>
+          <span>78%</span>
+        </div>
+      </div>
+    </div>
+    <div class="cd-searchbar">
+      <span>⌕</span>
+      <span>Search all knowledge bases…</span>
+      <span class="cd-search-hint">Ctrl K</span>
+    </div>
+    <div class="cd-bento cd-bento-0">
+      <div class="cd-empty-tile ga-empty">
+        <div class="cd-empty-icon">📦</div>
+        <div class="cd-empty-title">No knowledge packs installed</div>
+        <div class="cd-empty-sub">Connect to WiFi and open Packages to browse available modules. You choose which packs to download.</div>
+        <div class="cd-empty-cta">→ Open Packages</div>
+      </div>
+      <div class="cd-tile t-packages ga-packages cd-tile-sm">
+        <div class="cd-tile-icon">📦</div>
+        <div class="cd-tile-name">Packages</div>
+        <div class="cd-tile-sub">Check for updates</div>
+      </div>
+      <div class="cd-tile t-inet ga-inet cd-tile-sm">
+        <div class="cd-tile-icon">🌐</div>
+        <div class="cd-tile-name">Internet</div>
+        <div class="cd-online">Online</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     STATE B — 2 modules
+════════════════════════════════════════════════════ -->
+<div class="cd-label">State B — 2 modules active (Medical + Maps)</div>
+<div class="cd-wrap">
+  <div class="cd-chrome">
+    <div class="cd-topbar">
+      <div class="cd-wordmark">⬡ <em>CYBER</em>DECK</div>
+      <div class="cd-right">
+        <span>2 modules</span>
+        <div class="cd-bat">
+          <div class="cd-bat-shell"><div class="cd-bat-fill"></div></div>
+          <span>78%</span>
+        </div>
+      </div>
+    </div>
+    <div class="cd-searchbar">
+      <span>⌕</span>
+      <span>Search all knowledge bases…</span>
+      <span class="cd-search-hint">Ctrl K</span>
+    </div>
+    <div class="cd-bento cd-bento-2">
+      <div class="cd-tile t-medical ga-medical cd-tile-lg">
+        <div class="cd-tile-tag">Priority 1 · Offline</div>
+        <div class="cd-tile-icon">✚</div>
+        <div class="cd-tile-name">Medical</div>
+        <div class="cd-tile-sub">First aid · Emergency procedures · Medications</div>
+      </div>
+      <div class="cd-tile t-maps ga-maps cd-tile-lg">
+        <div class="cd-tile-tag">Priority 1 · Offline</div>
+        <div class="cd-tile-icon">🗺</div>
+        <div class="cd-tile-name">Maps</div>
+        <div class="cd-tile-sub">OpenStreetMap · Regional + World · No GPS required</div>
+      </div>
+      <div class="cd-tile t-packages ga-packages cd-tile-sm">
+        <div class="cd-tile-icon">📦</div>
+        <div class="cd-tile-name">Packages</div>
+        <div class="cd-tile-sub">2 installed · 3 updates available</div>
+      </div>
+      <div class="cd-tile t-inet ga-inet cd-tile-sm">
+        <div class="cd-tile-icon">🌐</div>
+        <div class="cd-tile-name">Internet</div>
+        <div class="cd-online">Online</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════
+     STATE C — 5 modules
+════════════════════════════════════════════════════ -->
+<div class="cd-label">State C — 5 modules active (full kit)</div>
+<div class="cd-wrap">
+  <div class="cd-chrome">
+    <div class="cd-topbar">
+      <div class="cd-wordmark">⬡ <em>CYBER</em>DECK</div>
+      <div class="cd-right">
+        <span>5 modules</span>
+        <div class="cd-bat">
+          <div class="cd-bat-shell"><div class="cd-bat-fill"></div></div>
+          <span>78%</span>
+        </div>
+      </div>
+    </div>
+    <div class="cd-searchbar">
+      <span>⌕</span>
+      <span>Search all knowledge bases…</span>
+      <span class="cd-search-hint">Ctrl K</span>
+    </div>
+    <div class="cd-bento cd-bento-5">
+      <div class="cd-tile t-medical ga-medical cd-tile-lg">
+        <div class="cd-tile-tag">Priority 1 · Offline</div>
+        <div class="cd-tile-icon">✚</div>
+        <div class="cd-tile-name">Medical</div>
+        <div class="cd-tile-sub">First aid · Emergency procedures · Medications · Triage</div>
+      </div>
+      <div class="cd-tile t-maps ga-maps cd-tile-lg">
+        <div class="cd-tile-tag">Priority 1 · Offline</div>
+        <div class="cd-tile-icon">🗺</div>
+        <div class="cd-tile-name">Maps</div>
+        <div class="cd-tile-sub">OpenStreetMap · Regional + World · No GPS required</div>
+      </div>
+      <div class="cd-tile t-survival ga-survival cd-tile-tall">
+        <div class="cd-tile-icon">🏕</div>
+        <div class="cd-tile-name">Survival</div>
+        <div class="cd-tile-sub">Shelter · Water · Fire · Navigation</div>
+      </div>
+      <div class="cd-tile t-food ga-food">
+        <div class="cd-tile-icon">🌿</div>
+        <div class="cd-tile-name">Food &amp; Plants</div>
+        <div class="cd-tile-sub">Foraging · Nutrition · Preservation</div>
+      </div>
+      <div class="cd-tile t-encyclo ga-encyclo">
+        <div class="cd-tile-icon">📖</div>
+        <div class="cd-tile-name">Encyclopedia</div>
+        <div class="cd-tile-sub">Curated Wikipedia · How-To</div>
+      </div>
+      <div class="cd-tile t-packages ga-packages cd-tile-sm">
+        <div class="cd-tile-icon">📦</div>
+        <div class="cd-tile-name">Packages</div>
+        <div class="cd-tile-sub">5 installed · Up to date</div>
+      </div>
+      <div class="cd-tile t-inet ga-inet cd-tile-sm">
+        <div class="cd-tile-icon">🌐</div>
+        <div class="cd-tile-name">Internet</div>
+        <div class="cd-online">Online</div>
+      </div>
+    </div>
+  </div>
+</div>

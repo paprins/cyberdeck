@@ -1,0 +1,137 @@
+<h2>Section 2: Home Portal UI</h2>
+<p class="subtitle">1280×720 display — touch + keyboard friendly, family-usable</p>
+
+<style>
+.device-frame {
+  width: 100%;
+  max-width: 800px;
+  margin: 16px auto;
+  border: 3px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  aspect-ratio: 16/9;
+  background: #0f1117;
+  display: flex;
+  flex-direction: column;
+}
+.device-nav {
+  background: #1a1d27;
+  padding: 8px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #2a2d3a;
+  flex-shrink: 0;
+}
+.device-nav .title { font-size: 14px; font-weight: 700; color: #e0e0e0; letter-spacing: 0.05em; }
+.device-nav .status { font-size: 11px; color: #666; display: flex; gap: 12px; }
+.device-nav .status span { color: #4caf50; }
+.device-search {
+  background: #1a1d27;
+  padding: 8px 16px;
+  border-bottom: 1px solid #2a2d3a;
+  flex-shrink: 0;
+}
+.search-bar {
+  background: #0f1117;
+  border: 1px solid #2a2d3a;
+  border-radius: 6px;
+  padding: 7px 14px;
+  color: #888;
+  font-size: 13px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.portal-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, 1fr);
+  gap: 8px;
+  padding: 10px;
+  flex: 1;
+}
+.portal-tile {
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  cursor: pointer;
+  transition: opacity 0.1s;
+  border: 1px solid rgba(255,255,255,0.06);
+}
+.portal-tile:hover { opacity: 0.85; }
+.portal-tile .icon { font-size: 28px; line-height: 1; }
+.portal-tile .label { font-size: 13px; font-weight: 600; color: #e0e0e0; letter-spacing: 0.02em; }
+.portal-tile .desc { font-size: 10px; color: rgba(255,255,255,0.45); text-align: center; line-height: 1.3; }
+.tile-medical { background: linear-gradient(135deg, #1a2a1a, #1e3a1e); }
+.tile-maps    { background: linear-gradient(135deg, #1a1f2a, #1e2a3a); }
+.tile-survival{ background: linear-gradient(135deg, #2a1f1a, #3a2a1a); }
+.tile-food    { background: linear-gradient(135deg, #2a2a1a, #3a351a); }
+.tile-wiki    { background: linear-gradient(135deg, #1a1a2a, #221a3a); }
+.tile-updates { background: linear-gradient(135deg, #1a2a2a, #1a3535); }
+.device-footer {
+  background: #1a1d27;
+  border-top: 1px solid #2a2d3a;
+  padding: 5px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+.device-footer .hint { font-size: 10px; color: #444; }
+.device-footer .bat { font-size: 10px; color: #4caf50; }
+</style>
+
+<div class="device-frame">
+  <div class="device-nav">
+    <div class="title">⚡ CYBERDECK</div>
+    <div class="status">
+      <span>WiFi: connected</span>
+      <span style="color:#666;">|</span>
+      <span>6 packs installed</span>
+    </div>
+  </div>
+  <div class="device-search">
+    <div class="search-bar">🔍  Search all knowledge bases…</div>
+  </div>
+  <div class="portal-grid">
+    <div class="portal-tile tile-medical">
+      <div class="icon">🏥</div>
+      <div class="label">Medical</div>
+      <div class="desc">First aid, medications,<br>emergency procedures</div>
+    </div>
+    <div class="portal-tile tile-maps">
+      <div class="icon">🗺️</div>
+      <div class="label">Maps</div>
+      <div class="desc">Offline OpenStreetMap<br>regional + worldwide</div>
+    </div>
+    <div class="portal-tile tile-survival">
+      <div class="icon">🏕️</div>
+      <div class="label">Survival</div>
+      <div class="desc">Shelter, water, fire,<br>navigation guides</div>
+    </div>
+    <div class="portal-tile tile-food">
+      <div class="icon">🌿</div>
+      <div class="label">Food & Plants</div>
+      <div class="desc">Foraging, nutrition,<br>preservation, recipes</div>
+    </div>
+    <div class="portal-tile tile-wiki">
+      <div class="icon">📖</div>
+      <div class="label">Encyclopedia</div>
+      <div class="desc">Curated Wikipedia:<br>science, how-to, history</div>
+    </div>
+    <div class="portal-tile tile-updates">
+      <div class="icon">📦</div>
+      <div class="label">Packages</div>
+      <div class="desc">Update knowledge bases,<br>manage storage</div>
+    </div>
+  </div>
+  <div class="device-footer">
+    <div class="hint">Tap a category or use the search bar</div>
+    <div class="bat">🔋 78% · 4h 20m remaining</div>
+  </div>
+</div>
+
+<p class="subtitle">Does this layout and category set feel right? Any tiles to add, remove, or rename?</p>

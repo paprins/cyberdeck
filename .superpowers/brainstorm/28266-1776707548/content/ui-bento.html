@@ -1,0 +1,362 @@
+<style>
+@import url('https://fonts.googleapis.com/css2?family=B612:ital,wght@0,400;0,700;1,400&family=Atkinson+Hyperlegible:wght@400;700&display=swap');
+
+.cd-root {
+  --bg:         oklch(13% 0.008 110);
+  --surface:    oklch(17% 0.01 110);
+  --surface-hi: oklch(21% 0.012 110);
+  --border:     oklch(28% 0.012 110);
+  --text:       oklch(88% 0.008 110);
+  --muted:      oklch(52% 0.01 110);
+  --gap:        6px;
+
+  --c-medical:  oklch(64% 0.16 28);
+  --c-maps:     oklch(58% 0.11 148);
+  --c-survival: oklch(65% 0.13 52);
+  --c-food:     oklch(60% 0.1 128);
+  --c-encyclo:  oklch(62% 0.09 238);
+  --c-packages: oklch(55% 0.06 200);
+  --c-internet: oklch(67% 0.13 258);
+
+  font-family: 'B612', 'Atkinson Hyperlegible', monospace;
+  background: var(--bg);
+  color: var(--text);
+  padding: 0;
+  margin: 0;
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  user-select: none;
+}
+
+/* ── Header bar ── */
+.cd-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  height: 40px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cd-wordmark {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text);
+}
+.cd-wordmark em {
+  font-style: normal;
+  color: var(--c-survival);
+}
+.cd-statusbar {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 11px;
+  color: var(--muted);
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+}
+.cd-status-item { display: flex; align-items: center; gap: 5px; }
+.cd-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--c-maps);
+  display: inline-block;
+  flex-shrink: 0;
+}
+.cd-bat {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cd-bat-bar {
+  width: 28px;
+  height: 11px;
+  border: 1.5px solid var(--border);
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+.cd-bat-bar::after {
+  content: '';
+  position: absolute;
+  right: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 5px;
+  background: var(--border);
+  border-radius: 0 1px 1px 0;
+}
+.cd-bat-fill {
+  position: absolute;
+  left: 1px; top: 1px; bottom: 1px;
+  width: 74%;
+  background: var(--c-maps);
+  border-radius: 1px;
+}
+
+/* ── Search ── */
+.cd-search {
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.cd-search-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 8px 14px;
+}
+.cd-search-icon { color: var(--muted); font-size: 14px; flex-shrink: 0; }
+.cd-search-input {
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 13px;
+  color: var(--muted);
+  flex: 1;
+  letter-spacing: 0.01em;
+}
+.cd-search-hint {
+  font-size: 10px;
+  color: oklch(36% 0.01 110);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* ── Bento grid ── */
+.cd-bento {
+  display: grid;
+  grid-template-columns: 3fr 3fr 2fr 2fr;
+  grid-template-rows: 2fr 1.3fr 1fr;
+  grid-template-areas:
+    "medical  maps     maps     survival"
+    "medical  food     encyclo  survival"
+    "packages packages internet internet";
+  gap: var(--gap);
+  padding: var(--gap);
+  flex: 1;
+  min-height: 0;
+}
+
+/* ── Tile base ── */
+.cd-tile {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 2px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 14px 16px;
+  position: relative;
+  overflow: hidden;
+  cursor: pointer;
+  transition: background 0.12s;
+}
+.cd-tile:hover { background: var(--surface-hi); }
+
+.cd-tile-bg-symbol {
+  position: absolute;
+  top: 50%;
+  right: -4px;
+  transform: translateY(-50%);
+  font-size: clamp(56px, 10vw, 96px);
+  opacity: 0.06;
+  line-height: 1;
+  pointer-events: none;
+}
+
+.cd-tile-tag {
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--muted);
+  margin-bottom: 4px;
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+}
+
+.cd-tile-name {
+  font-size: clamp(15px, 2vw, 20px);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  line-height: 1.1;
+  margin-bottom: 4px;
+}
+
+.cd-tile-sub {
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+/* Accent: thin top rule per tile (1px — NOT banned) */
+.cd-tile::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+}
+
+/* ── Medical ── */
+.cd-tile-medical { grid-area: medical; }
+.cd-tile-medical::before { background: var(--c-medical); }
+.cd-tile-medical .cd-tile-name { color: var(--c-medical); }
+.cd-tile-medical .cd-tile-bg-symbol { opacity: 0.055; }
+
+/* ── Maps ── */
+.cd-tile-maps { grid-area: maps; }
+.cd-tile-maps::before { background: var(--c-maps); }
+.cd-tile-maps .cd-tile-name { color: var(--c-maps); }
+
+/* ── Survival ── */
+.cd-tile-survival { grid-area: survival; }
+.cd-tile-survival::before { background: var(--c-survival); }
+.cd-tile-survival .cd-tile-name { color: var(--c-survival); }
+
+/* ── Food ── */
+.cd-tile-food { grid-area: food; }
+.cd-tile-food::before { background: var(--c-food); }
+.cd-tile-food .cd-tile-name { color: var(--c-food); }
+
+/* ── Encyclopedia ── */
+.cd-tile-encyclo { grid-area: encyclo; }
+.cd-tile-encyclo::before { background: var(--c-encyclo); }
+.cd-tile-encyclo .cd-tile-name { color: var(--c-encyclo); }
+
+/* ── Packages ── */
+.cd-tile-packages { grid-area: packages; }
+.cd-tile-packages::before { background: var(--c-packages); }
+.cd-tile-packages .cd-tile-name { color: var(--c-packages); }
+
+/* ── Internet ── */
+.cd-tile-internet { grid-area: internet; }
+.cd-tile-internet::before { background: var(--c-internet); }
+.cd-tile-internet .cd-tile-name { color: var(--c-internet); }
+
+.cd-online-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--c-maps);
+  font-family: 'Atkinson Hyperlegible', sans-serif;
+  margin-top: 3px;
+}
+.cd-online-badge::before {
+  content: '';
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  background: var(--c-maps);
+  animation: cd-pulse 2.4s ease-in-out infinite;
+}
+@keyframes cd-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Large tile extras */
+.cd-tile-large .cd-tile-name {
+  font-size: clamp(18px, 2.4vw, 26px);
+}
+.cd-tile-large .cd-tile-sub {
+  font-size: 12px;
+  max-width: 28ch;
+}
+.cd-tile-large .cd-tile-bg-symbol {
+  font-size: clamp(72px, 14vw, 140px);
+}
+</style>
+
+<div class="cd-root">
+
+  <div class="cd-header">
+    <div class="cd-wordmark">⬡ <em>CYBER</em>DECK</div>
+    <div class="cd-statusbar">
+      <div class="cd-status-item">
+        <span class="cd-dot"></span>
+        <span>WiFi connected</span>
+      </div>
+      <div class="cd-status-item">
+        <span>6 packs</span>
+      </div>
+      <div class="cd-bat">
+        <div class="cd-bat-bar"><div class="cd-bat-fill"></div></div>
+        <span>78%</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cd-search">
+    <div class="cd-search-inner">
+      <span class="cd-search-icon">⌕</span>
+      <div class="cd-search-input">Search all knowledge bases…</div>
+      <div class="cd-search-hint">Ctrl K</div>
+    </div>
+  </div>
+
+  <div class="cd-bento">
+
+    <div class="cd-tile cd-tile-medical cd-tile-large">
+      <div class="cd-tile-bg-symbol">✚</div>
+      <div class="cd-tile-tag">Priority 1 · Offline</div>
+      <div class="cd-tile-name">Medical</div>
+      <div class="cd-tile-sub">First aid · Emergency procedures · Medications · Triage</div>
+    </div>
+
+    <div class="cd-tile cd-tile-maps cd-tile-large">
+      <div class="cd-tile-bg-symbol">◎</div>
+      <div class="cd-tile-tag">Priority 1 · Offline</div>
+      <div class="cd-tile-name">Maps</div>
+      <div class="cd-tile-sub">OpenStreetMap · Regional + World · No GPS required</div>
+    </div>
+
+    <div class="cd-tile cd-tile-survival">
+      <div class="cd-tile-bg-symbol">▲</div>
+      <div class="cd-tile-tag">Offline</div>
+      <div class="cd-tile-name">Survival</div>
+      <div class="cd-tile-sub">Shelter · Water · Fire · Navigation</div>
+    </div>
+
+    <div class="cd-tile cd-tile-food">
+      <div class="cd-tile-bg-symbol">❧</div>
+      <div class="cd-tile-tag">Offline</div>
+      <div class="cd-tile-name">Food &amp; Plants</div>
+      <div class="cd-tile-sub">Foraging · Nutrition · Preservation</div>
+    </div>
+
+    <div class="cd-tile cd-tile-encyclo">
+      <div class="cd-tile-bg-symbol">◈</div>
+      <div class="cd-tile-tag">Offline</div>
+      <div class="cd-tile-name">Encyclopedia</div>
+      <div class="cd-tile-sub">Curated Wikipedia · How-To · Science</div>
+    </div>
+
+    <div class="cd-tile cd-tile-packages">
+      <div class="cd-tile-bg-symbol">⬡</div>
+      <div class="cd-tile-tag">System</div>
+      <div class="cd-tile-name">Packages</div>
+      <div class="cd-tile-sub">6 installed · Check for updates · Manage storage</div>
+    </div>
+
+    <div class="cd-tile cd-tile-internet">
+      <div class="cd-tile-bg-symbol">◉</div>
+      <div class="cd-tile-name">Internet</div>
+      <div class="cd-tile-sub">Live web access</div>
+      <div class="cd-online-badge">Online</div>
+    </div>
+
+  </div>
+
+</div>
