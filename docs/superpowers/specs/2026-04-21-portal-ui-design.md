@@ -177,7 +177,7 @@ HTML shell. Loads Tailwind CSS, Alpine.js, self-hosted fonts. Renders top chrome
 }
 ```
 
-Polls `GET /api/system` every 10 seconds via `$fetch` to refresh chrome indicators. Defines `Ctrl+K` keydown handler that focuses the search input.
+Polls `GET /api/system` every 10 seconds via `fetch()` to refresh chrome indicators. Defines `Ctrl+K` keydown handler that focuses the search input.
 
 ### `home.html`
 Extends `base.html`. Receives `layout: BentoLayout` from the router. Renders CSS Grid with `grid-template-areas` from `layout.grid_template_areas`. Iterates `layout.tiles` and `layout.system_tiles` via the `tile` macro. Renders search bar below the chrome.
@@ -214,7 +214,7 @@ Full-width below chrome. Styled input, always visible. Displays `⌕ Search know
 ## 7. New API Routes
 
 ### `GET /`
-Reads registry via `load_registry(settings)`, reads wifi state from `/api/system` data, calls `compute_layout(active_modules, wifi_connected)`, renders `home.html` with `layout` context. Returns `text/html`.
+Reads registry via `load_registry(settings)`, reads wifi state via the same system-reading function used by `/api/system` (no HTTP self-call), calls `compute_layout(active_modules, wifi_connected)`, renders `home.html` with `layout` context. Returns `text/html`.
 
 ### `GET /api/system`
 Returns live system state. Alpine.js polls every 10s.
