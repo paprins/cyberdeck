@@ -31,6 +31,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.routers import home as home_router
     app.include_router(home_router.make_router(cfg))
 
+    from app.routers import search as search_router
+    app.include_router(search_router.make_router(cfg))
+
     @app.get("/health")
     async def health():
         return {"status": "ok"}
