@@ -34,7 +34,11 @@ def _battery_pct() -> int | None:
 
 
 def _battery_charging() -> bool:
-    for path in Path("/sys/class/power_supply").glob("*/status"):
+    supply_dir = Path("/sys/class/power_supply")
+    if not supply_dir.exists():
+        return False
+    paths = sorted(supply_dir.glob("*/status"), key=lambda p: (not p.parent.name.startswith("BAT"), p))
+    for path in paths:
         try:
             return path.read_text().strip().lower() == "charging"
         except OSError:
@@ -43,12 +47,20 @@ def _battery_charging() -> bool:
 
 
 def _wifi_connected() -> bool:
-    try:
-        content = Path("/proc/net/wireless").read_text()
-        data_lines = [l for l in content.splitlines()[2:] if l.strip()]
-        return len(data_lines) > 0
-    except OSError:
+    net_dir = Path("/sys/class/net")
+    if not net_dir.exists():
         return False
+    for iface_dir in net_dir.iterdir():
+        name = iface_dir.name
+        if not (name.startswith("wlan") or name.startswith("wlp")):
+            continue
+        try:
+            state = (iface_dir / "operstate").read_text().strip()
+            if state == "up":
+                return True
+        except OSError:
+            pass
+    return False
 
 
 def _updates_available(settings: Settings) -> int:
