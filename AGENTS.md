@@ -51,6 +51,16 @@ This is a **Raspberry Pi offline-first device** (cyberdeck). The FastAPI backend
 
 Activating a module in the registry must eventually be reflected in the config of those services — that integration is not yet built.
 
+## Coding Principles
+
+**Think before coding.** State assumptions explicitly. If multiple interpretations exist, present them — don't pick silently. If something is unclear, stop, ask and present your recommendation.
+
+**Simplicity first.** Minimum code that solves the problem. No features beyond what was asked, no abstractions for single-use code, no error handling for impossible scenarios. Ask: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
+
+**Surgical changes.** Touch only what you must. Don't improve adjacent code or refactor things that aren't broken. Match existing style. Every changed line should trace directly to the user's request.
+
+**Goal-driven execution.** Transform tasks into verifiable goals — "fix the bug" → "write a test that reproduces it, then make it pass". For multi-step tasks, state a brief plan with a verify checkpoint per step.
+
 ## Testing conventions
 
 - `conftest.py` provides `tmp_settings` (Settings pointing at `tmp_path`) and `clean_cyberdeck_env` (autouse, strips `CYBERDECK_*` env vars)
