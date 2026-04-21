@@ -27,44 +27,44 @@ class BentoLayout:
 
 
 # Each preset: (areas_no_wifi, areas_wifi, slot_names, columns, rows)
-# areas: one quoted string per row, separated by "\n"
+# areas: one quoted string per row, separated by spaces
 # slot_names: grid-area names for non-center content modules, in fill order
 _PRESETS: dict[int, tuple[str, str, list[str], int, int]] = {
     0: (
-        "'empty empty empty empty'\n'pkg   pkg   pkg   pkg  '",
-        "'empty empty empty inet '\n'pkg   pkg   pkg   inet '",
+        "'empty empty empty empty' 'pkg   pkg   pkg   pkg  '",
+        "'empty empty empty inet ' 'pkg   pkg   pkg   inet '",
         [], 4, 2,
     ),
     1: (
-        "'.    center center'\n'.    center center'\n'pkg  pkg    pkg  '",
-        "'.    center center'\n'.    center center'\n'pkg  pkg    inet '",
+        "'.    center center' '.    center center' 'pkg  pkg    pkg  '",
+        "'.    center center' '.    center center' 'pkg  pkg    inet '",
         [], 3, 3,
     ),
     2: (
-        "'slot1 center center'\n'slot1 center center'\n'pkg   pkg    pkg  '",
-        "'slot1 center center'\n'slot1 center center'\n'pkg   pkg    inet '",
+        "'slot1 center center' 'slot1 center center' 'pkg   pkg    pkg  '",
+        "'slot1 center center' 'slot1 center center' 'pkg   pkg    inet '",
         ["slot1"], 3, 3,
     ),
     3: (
-        "'slot1 center center slot2'\n'slot3 center center slot2'\n'pkg   pkg    pkg    pkg  '",
-        "'slot1 center center slot2'\n'slot3 center center slot2'\n'pkg   pkg    pkg    inet '",
+        "'slot1 center center slot2' 'slot3 center center slot2' 'pkg   pkg    pkg    pkg  '",
+        "'slot1 center center slot2' 'slot3 center center slot2' 'pkg   pkg    pkg    inet '",
         ["slot1", "slot2", "slot3"], 4, 3,
     ),
     4: (
-        "'slot1 center center slot2'\n'slot3 center center slot4'\n'pkg   pkg    pkg    pkg  '",
-        "'slot1 center center slot2'\n'slot3 center center slot4'\n'pkg   pkg    pkg    inet '",
+        "'slot1 center center slot2' 'slot3 center center slot4' 'pkg   pkg    pkg    pkg  '",
+        "'slot1 center center slot2' 'slot3 center center slot4' 'pkg   pkg    pkg    inet '",
         ["slot1", "slot2", "slot3", "slot4"], 4, 3,
     ),
     5: (
-        "'slot1 slot1  slot2  slot3'\n'slot4 center center slot3'\n'slot4 center center slot5'\n'pkg   pkg    pkg    slot5'",
-        "'slot1 slot1  slot2  slot3'\n'slot4 center center slot3'\n'slot4 center center inet '\n'pkg   pkg    pkg    inet '",
+        "'slot1 slot1  slot2  slot3' 'slot4 center center slot3' 'slot4 center center slot5' 'pkg   pkg    pkg    slot5'",
+        "'slot1 slot1  slot2  slot3' 'slot4 center center slot3' 'slot4 center center inet ' 'pkg   pkg    pkg    inet '",
         ["slot1", "slot2", "slot3", "slot4", "slot5"], 4, 4,
     ),
 }
 # 6+ uses same shape as 5 but with an extra row of slots above
 _PRESET_6PLUS: tuple[str, str, list[str], int, int] = (
-    "'slot6 slot6  slot7  slot8'\n'slot1 slot1  slot2  slot3'\n'slot4 center center slot3'\n'slot4 center center slot5'\n'pkg   pkg    pkg    slot5'",
-    "'slot6 slot6  slot7  slot8'\n'slot1 slot1  slot2  slot3'\n'slot4 center center slot3'\n'slot4 center center inet '\n'pkg   pkg    pkg    inet '",
+    "'slot6 slot6  slot7  slot8' 'slot1 slot1  slot2  slot3' 'slot4 center center slot3' 'slot4 center center slot5' 'pkg   pkg    pkg    slot5'",
+    "'slot6 slot6  slot7  slot8' 'slot1 slot1  slot2  slot3' 'slot4 center center slot3' 'slot4 center center inet ' 'pkg   pkg    pkg    inet '",
     ["slot1", "slot2", "slot3", "slot4", "slot5", "slot6", "slot7", "slot8"], 4, 5,
 )
 

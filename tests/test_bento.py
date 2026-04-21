@@ -151,9 +151,10 @@ def test_grid_template_areas_contains_pkg():
 
 
 def test_grid_template_areas_is_quoted_rows():
-    """Each row must be a quoted string, rows separated by newlines."""
+    """Each row must be a quoted string. Rows are space-separated."""
     layout = compute_layout([_mod("maps-world", "maps")], wifi_connected=False)
-    rows = layout.grid_template_areas.strip().splitlines()
+    import re
+    rows = re.findall(r"'[^']*'", layout.grid_template_areas)
     assert len(rows) == layout.rows
     for row in rows:
-        assert row.strip().startswith("'") and row.strip().endswith("'")
+        assert row.startswith("'") and row.endswith("'")

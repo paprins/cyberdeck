@@ -4,6 +4,8 @@
 @tailwind utilities;
 
 @layer base {
+  [x-cloak] { display: none !important; }
+
   @font-face {
     font-family: 'B612';
     src: url('/static/fonts/B612-Regular.woff2') format('woff2');

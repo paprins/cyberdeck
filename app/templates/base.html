@@ -42,6 +42,7 @@
         <span class="text-[11px] tracking-[0.12em] uppercase text-text-lo">Modules</span>
         <span class="font-bold text-[13px] text-text-hi">{{ active_count }} active</span>
         <span
+          x-cloak
           x-show="updates_available > 0"
           x-text="updates_available"
           class="inline-flex items-center justify-center min-w-[20px] h-5 px-[5px] rounded-[10px] bg-tile-survival text-[11px] font-bold leading-none"
