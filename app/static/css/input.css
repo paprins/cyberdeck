@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  @font-face {
+    font-family: 'B612';
+    src: url('/static/fonts/B612-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'B612';
+    src: url('/static/fonts/B612-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Atkinson Hyperlegible';
+    src: url('/static/fonts/AtkinsonHyperlegible-Regular.woff2') format('woff2');
+    font-weight: 400;
+    font-style: normal;
+  }
+  @font-face {
+    font-family: 'Atkinson Hyperlegible';
+    src: url('/static/fonts/AtkinsonHyperlegible-Bold.woff2') format('woff2');
+    font-weight: 700;
+    font-style: normal;
+  }
+}
