@@ -1,0 +1,86 @@
+from __future__ import annotations
+import pytest
+from httpx import AsyncClient, ASGITransport
+from app.main import create_app
+
+
+@pytest.fixture
+def app(tmp_settings):
+    return create_app(tmp_settings)
+
+
+@pytest.fixture
+async def client(app):
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
+        yield c
+
+
+async def test_system_endpoint_returns_200(client):
+    r = await client.get("/api/system")
+    assert r.status_code == 200
+
+
+async def test_system_endpoint_returns_all_keys(client):
+    r = await client.get("/api/system")
+    data = r.json()
+    assert "battery_pct" in data
+    assert "battery_charging" in data
+    assert "wifi_connected" in data
+    assert "updates_available" in data
+    assert "uptime_s" in data
+
+
+async def test_system_battery_pct_is_int_or_none(client):
+    r = await client.get("/api/system")
+    val = r.json()["battery_pct"]
+    assert val is None or isinstance(val, int)
+
+
+async def test_system_battery_charging_is_bool(client):
+    r = await client.get("/api/system")
+    assert isinstance(r.json()["battery_charging"], bool)
+
+
+async def test_system_wifi_connected_is_bool(client):
+    r = await client.get("/api/system")
+    assert isinstance(r.json()["wifi_connected"], bool)
+
+
+async def test_system_updates_available_is_int(client):
+    r = await client.get("/api/system")
+    assert isinstance(r.json()["updates_available"], int)
+
+
+async def test_system_updates_available_counts_modules_with_updates(client, tmp_settings):
+    from app.services.registry import save_registry
+    from app.models.registry import Registry, Module
+    reg = Registry(
+        update_server="https://example.com/manifest.json",
+        modules=[
+            Module(
+                id="maps-world", display_name="Maps", category="maps",
+                description="OSM", latest_version="2024-02", size_gb=10,
+                checksum="sha256:new",
+                installed_version="2024-01", installed_checksum="sha256:old",
+                active=True,
+            ),
+            Module(
+                id="medical-wikimed", display_name="Medical", category="medical",
+                description="WikiMed", latest_version="2024-01", size_gb=0.8,
+                checksum="sha256:abc",
+                installed_version="2024-01", installed_checksum="sha256:abc",
+                active=True,
+            ),
+        ],
+    )
+    save_registry(tmp_settings, reg)
+    r = await client.get("/api/system")
+    assert r.json()["updates_available"] == 1
+
+
+async def test_system_uptime_is_int_or_none(client):
+    r = await client.get("/api/system")
+    val = r.json()["uptime_s"]
+    assert val is None or isinstance(val, int)
