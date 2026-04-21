@@ -1,11 +1,40 @@
-@config "../../../tailwind.config.js";
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@theme {
+  /* ── Surfaces ── */
+  --color-bg:       oklch(9% 0.005 90);
+  --color-surface:  oklch(15% 0.007 90);
+  --color-elevated: oklch(20% 0.010 90);
+  --color-border:   oklch(30% 0.008 90);
+
+  /* ── Amber ── */
+  --color-amber:       oklch(80% 0.15 75);
+  --color-amber-mid:   oklch(68% 0.10 75);
+  --color-amber-ghost: oklch(35% 0.06 75);
+
+  /* ── Text ── */
+  --color-text-hi:  oklch(92% 0.006 90);
+  --color-text-mid: oklch(66% 0.006 90);
+  --color-text-lo:  oklch(48% 0.005 90);
+
+  /* ── Tile accents ── */
+  --color-tile-medical:      oklch(68% 0.25 25);
+  --color-tile-maps:         oklch(72% 0.22 145);
+  --color-tile-survival:     oklch(76% 0.18 58);
+  --color-tile-food:         oklch(74% 0.19 118);
+  --color-tile-encyclopedia: oklch(70% 0.18 232);
+  --color-tile-packages:     oklch(65% 0.14 195);
+  --color-tile-internet:     oklch(72% 0.20 260);
+
+  /* ── Typography ── */
+  --font-display: 'B612', monospace;
+  --font-body:    'Atkinson Hyperlegible', sans-serif;
+
+  /* ── Shape ── */
+  --radius-tile: 16px;
+}
 
 @layer base {
-  [x-cloak] { display: none !important; }
-
   @font-face {
     font-family: 'B612';
     src: url('/static/fonts/B612-Regular.woff2') format('woff2');
@@ -30,4 +59,7 @@
     font-weight: 700;
     font-style: normal;
   }
+
+  /* Hide Alpine.js x-cloak elements until initialized */
+  [x-cloak] { display: none !important; }
 }
