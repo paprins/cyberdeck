@@ -79,3 +79,40 @@ async def test_home_active_count_in_chrome(client, tmp_settings):
     save_registry(tmp_settings, reg)
     r = await client.get("/")
     assert "2 active" in r.text
+
+
+async def test_maps_tile_has_mbtiles_url(client, tmp_settings):
+    reg = Registry(
+        update_server="https://example.com/manifest.json",
+        modules=[
+            Module(
+                id="maps-world", display_name="Maps", category="maps",
+                description="OSM", latest_version="2024-01",
+                size_gb=10, checksum="sha256:abc", active=True,
+            )
+        ],
+    )
+    save_registry(tmp_settings, reg)
+    r = await client.get("/")
+    assert 'href="http://localhost:8081/' in r.text
+
+
+async def test_medical_tile_has_kiwix_url(client, tmp_settings):
+    reg = Registry(
+        update_server="https://example.com/manifest.json",
+        modules=[
+            Module(
+                id="medical-wikimed", display_name="Medical", category="medical",
+                description="WikiMed", latest_version="2024-01",
+                size_gb=0.8, checksum="sha256:abc", active=True,
+            )
+        ],
+    )
+    save_registry(tmp_settings, reg)
+    r = await client.get("/")
+    assert 'href="http://localhost:8080/medical-wikimed/' in r.text
+
+
+async def test_packages_tile_has_packages_url(client):
+    r = await client.get("/")
+    assert 'href="/packages"' in r.text

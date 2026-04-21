@@ -1,14 +1,34 @@
 from __future__ import annotations
+from dataclasses import replace as dc_replace
 from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from app.config import Settings
+from app.models.registry import Module
+from app.services.bento import BentoLayout, TileLayout, compute_layout
 from app.services.registry import load_registry
 from app.services.system import read_system_status
-from app.services.bento import compute_layout
 
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
+
+
+def _tile_url(module: Module, cfg: Settings) -> str:
+    if module.category == "maps":
+        return f"http://localhost:{cfg.mbtiles_port}/"
+    if module.category == "packages":
+        return "/packages"
+    if module.category == "internet":
+        return "https://duckduckgo.com"
+    return f"http://localhost:{cfg.kiwix_port}/{module.id}/"
+
+
+def _with_urls(layout: BentoLayout, cfg: Settings) -> BentoLayout:
+    return dc_replace(
+        layout,
+        tiles=[dc_replace(t, url=_tile_url(t.module, cfg)) for t in layout.tiles],
+        system_tiles=[dc_replace(t, url=_tile_url(t.module, cfg)) for t in layout.system_tiles],
+    )
 
 
 def make_router(cfg: Settings) -> APIRouter:
@@ -20,7 +40,7 @@ def make_router(cfg: Settings) -> APIRouter:
         registry = load_registry(cfg)
         status = read_system_status(cfg)
         active_modules = [m for m in registry.modules if m.active]
-        layout = compute_layout(active_modules, wifi_connected=status.wifi_connected)
+        layout = _with_urls(compute_layout(active_modules, wifi_connected=status.wifi_connected), cfg)
         return templates.TemplateResponse(request, "home.html", {
             "layout": layout,
             "active_count": len(active_modules),

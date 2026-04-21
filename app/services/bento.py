@@ -14,6 +14,7 @@ class TileLayout:
     module: Module
     grid_area: str
     size: str  # "center" | "regular"
+    url: str = ""
 
 
 @dataclass

@@ -19,15 +19,6 @@
 
 <!-- Bento grid -->
 <div class="flex-1 p-[10px] min-h-0">
-  {% if layout.empty %}
-  <div class="w-full h-full flex items-center justify-center">
-    <div class="text-center">
-      <div class="text-[48px] mb-4">📦</div>
-      <div class="font-display font-bold text-[22px] uppercase tracking-[0.05em] text-text-mid mb-2">No modules active</div>
-      <div class="font-body text-[14px] text-text-lo">Open Packages to install content</div>
-    </div>
-  </div>
-  {% else %}
   <div
     class="grid w-full h-full gap-[10px]"
     style="
@@ -36,13 +27,22 @@
       grid-template-rows: repeat({{ layout.rows }}, 1fr);
     "
   >
+    {% if layout.empty %}
+    <div style="grid-area: empty" class="flex items-center justify-center">
+      <div class="text-center">
+        <div class="text-[48px] mb-4">📦</div>
+        <div class="font-display font-bold text-[22px] uppercase tracking-[0.05em] text-text-mid mb-2">No modules active</div>
+        <div class="font-body text-[14px] text-text-lo">Open Packages to install content</div>
+      </div>
+    </div>
+    {% else %}
     {% for tile in layout.tiles %}
       {{ render_tile(tile, is_center=(tile.grid_area == 'center')) }}
     {% endfor %}
+    {% endif %}
     {% for tile in layout.system_tiles %}
       {{ render_tile(tile, is_center=False) }}
     {% endfor %}
   </div>
-  {% endif %}
 </div>
 {% endblock %}

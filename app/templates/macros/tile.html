@@ -31,8 +31,10 @@
 {%- set name_size = 'text-[30px]' if is_center else 'text-[18px]' -%}
 {%- set sub_size  = 'text-[14px]' if is_center else 'text-[12px]' -%}
 {%- set cat = tile.module.category -%}
-<div
-  class="{{ bg }} rounded-tile border border-border flex flex-col items-center justify-center text-center gap-[6px] relative overflow-hidden p-4"
+{%- set tag = 'a' if tile.url else 'div' -%}
+<{{ tag }}
+  {% if tile.url %}href="{{ tile.url }}"{% endif %}
+  class="{{ bg }} rounded-tile border border-border flex flex-col items-center justify-center text-center gap-[6px] relative overflow-hidden p-4{% if tile.url %} cursor-pointer hover:bg-border transition-none{% endif %}"
   style="grid-area: {{ tile.grid_area }}"
 >
   <div class="absolute top-0 left-0 right-0 h-[3px] rounded-t-tile {{ ACCENT_BG.get(cat, 'bg-text-lo') }}"></div>
@@ -43,5 +45,5 @@
   <div class="font-body {{ sub_size }} text-text-mid leading-snug max-w-[90%]">
     {{ tile.module.description }}
   </div>
-</div>
+</{{ tag }}>
 {% endmacro %}
