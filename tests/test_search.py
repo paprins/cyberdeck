@@ -23,9 +23,13 @@ class _MockClient:
     def __init__(self, responses: dict[str, list]):
         self._responses = responses  # {url_fragment: [titles]}
 
-    async def get(self, url: str, timeout: float = 2.0):
+    async def get(self, url: str, *, params: dict | None = None, timeout: float = 2.0):
+        # Build a composite string from url + params values to search fragments in
+        search_str = url
+        if params:
+            search_str += "&".join(f"{k}={v}" for k, v in params.items())
         for fragment, data in self._responses.items():
-            if fragment in url:
+            if fragment in search_str:
                 return _MockResponse(data, 200)
         return _MockResponse([], 404)
 
@@ -40,7 +44,7 @@ class _MockResponse:
 
 
 class _ErrorClient:
-    async def get(self, url: str, timeout: float = 2.0):
+    async def get(self, url: str, *, params: dict | None = None, timeout: float = 2.0):
         raise httpx.RequestError("connection refused")
 
 
@@ -160,6 +164,14 @@ async def test_search_endpoint_returns_200_with_valid_q(client):
 async def test_search_endpoint_returns_list(client):
     r = await client.get("/api/search?q=test")
     assert isinstance(r.json(), list)
+
+
+async def test_search_modules_encodes_special_chars_in_url():
+    modules = [_mod("medical-wikimed", "medical")]
+    client = _MockClient({"medical-wikimed": ["Fire & Rescue"]})
+    results = await search_modules("fire & rescue", modules, 8080, client)
+    assert len(results) == 1
+    assert "%26" in results[0]["url"]
 
 
 async def test_search_endpoint_result_shape(client, tmp_settings, monkeypatch):
