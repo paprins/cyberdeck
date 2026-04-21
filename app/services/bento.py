@@ -107,9 +107,9 @@ def compute_layout(modules: list[Module], wifi_connected: bool) -> BentoLayout:
             tiles.append(TileLayout(module=module, grid_area=slot, size="regular"))
 
     # System tiles
-    system_tiles = [TileLayout(module=_PACKAGES_MODULE, grid_area="pkg", size="regular")]
+    system_tiles = [TileLayout(module=_PACKAGES_MODULE.model_copy(), grid_area="pkg", size="regular")]
     if wifi_connected:
-        system_tiles.append(TileLayout(module=_INTERNET_MODULE, grid_area="inet", size="regular"))
+        system_tiles.append(TileLayout(module=_INTERNET_MODULE.model_copy(), grid_area="inet", size="regular"))
 
     return BentoLayout(
         tiles=tiles,

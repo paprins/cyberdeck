@@ -130,6 +130,14 @@ def test_six_plus_modules_grid_is_4x5():
     assert layout.rows == 5
 
 
+def test_overflow_modules_beyond_slots_are_dropped():
+    """Grid has 8 non-center slots for 6+ modules; extras are silently dropped."""
+    modules = [_mod(f"mod-{i}", "encyclopedia") for i in range(10)]
+    layout = compute_layout(modules, wifi_connected=False)
+    # center tile + 8 slots = 9 total
+    assert len(layout.tiles) == 9
+
+
 # ── grid_template_areas format ────────────────────────────────────────────────
 
 def test_grid_template_areas_contains_center():
