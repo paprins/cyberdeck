@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% from "macros/tile.html" import render_tile %}
+
+{% block content %}
+<!-- Search bar -->
+<div class="px-[10px] pt-2 flex-shrink-0">
+  <div class="flex items-center gap-[10px] bg-surface border border-border rounded-lg px-4 py-[10px]">
+    <span class="text-text-lo text-[14px]">⌕</span>
+    <input
+      id="search"
+      type="text"
+      placeholder="Search knowledge bases…"
+      class="flex-1 bg-transparent font-display text-[14px] text-text-lo placeholder-text-lo outline-none tracking-[0.02em]"
+      disabled
+    >
+    <span class="text-[11px] text-text-lo tracking-[0.08em] bg-[oklch(22%_0.006_90)] border border-border px-2 py-[2px] rounded">Ctrl+K</span>
+  </div>
+</div>
+
+<!-- Bento grid -->
+<div class="flex-1 p-[10px] min-h-0">
+  {% if layout.empty %}
+  <div class="w-full h-full flex items-center justify-center">
+    <div class="text-center">
+      <div class="text-[48px] mb-4">📦</div>
+      <div class="font-display font-bold text-[22px] uppercase tracking-[0.05em] text-text-mid mb-2">No modules active</div>
+      <div class="font-body text-[14px] text-text-lo">Open Packages to install content</div>
+    </div>
+  </div>
+  {% else %}
+  <div
+    class="grid w-full h-full gap-[10px]"
+    style="
+      grid-template-areas: {{ layout.grid_template_areas }};
+      grid-template-columns: repeat({{ layout.columns }}, 1fr);
+      grid-template-rows: repeat({{ layout.rows }}, 1fr);
+    "
+  >
+    {% for tile in layout.tiles %}
+      {{ render_tile(tile, is_center=(tile.grid_area == 'center')) }}
+    {% endfor %}
+    {% for tile in layout.system_tiles %}
+      {{ render_tile(tile, is_center=False) }}
+    {% endfor %}
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
