@@ -116,3 +116,11 @@ async def test_medical_tile_has_kiwix_url(client, tmp_settings):
 async def test_packages_tile_has_packages_url(client):
     r = await client.get("/")
     assert 'href="/packages"' in r.text
+
+
+async def test_empty_state_cta_links_to_packages(client):
+    r = await client.get("/")
+    assert "No modules active" in r.text
+    # The CTA text should be a link, not just plain text
+    assert '<a href="/packages"' in r.text
+    assert 'Open Packages to install content</a>' in r.text
