@@ -219,3 +219,152 @@ async def test_check_for_updates_raises_on_network_error(tmp_settings, monkeypat
     monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _ErrorClient)
     with pytest.raises(httpx.RequestError):
         await pkg_service.check_for_updates(tmp_settings)
+
+
+# ── HTTP fixtures ─────────────────────────────────────────────────────────────
+
+@pytest.fixture
+def app(tmp_settings):
+    return create_app(tmp_settings)
+
+
+@pytest.fixture
+async def client(app):
+    async with AsyncClient(
+        transport=ASGITransport(app=app), base_url="http://test"
+    ) as c:
+        yield c
+
+
+# ── GET /packages ─────────────────────────────────────────────────────────────
+
+async def test_packages_page_returns_200(client):
+    r = await client.get("/packages")
+    assert r.status_code == 200
+
+
+async def test_packages_page_returns_html(client):
+    r = await client.get("/packages")
+    assert "text/html" in r.headers["content-type"]
+
+
+async def test_packages_page_shows_installed_module(client, tmp_settings):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
+    _seed(tmp_settings, [m])
+    r = await client.get("/packages")
+    assert "WikiMed" in r.text
+
+
+async def test_packages_page_shows_available_module(client, tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    r = await client.get("/packages")
+    assert "WikiMed" in r.text
+
+
+async def test_packages_page_shows_updates_section_when_update_exists(client, tmp_settings):
+    m = _mod(
+        installed_version="2024-09",
+        installed_checksum="sha256:old",
+        latest_version="2024-10",
+        active=True,
+    )
+    _seed(tmp_settings, [m])
+    r = await client.get("/packages")
+    assert "Updates available" in r.text
+
+
+# ── POST /api/packages/check-updates ─────────────────────────────────────────
+
+async def test_check_updates_returns_502_on_network_error(client, tmp_settings, monkeypatch):
+    _seed(tmp_settings)
+    import app.routers.packages as pkg_router
+
+    async def _fail(settings):
+        raise httpx.RequestError("down")
+
+    monkeypatch.setattr(pkg_router, "check_for_updates", _fail)
+    r = await client.post("/api/packages/check-updates")
+    assert r.status_code == 502
+
+
+# ── GET /api/packages/{id}/status ────────────────────────────────────────────
+
+async def test_status_returns_404_for_unknown_module(client, tmp_settings):
+    _seed(tmp_settings)
+    r = await client.get("/api/packages/nonexistent/status")
+    assert r.status_code == 404
+
+
+async def test_status_returns_not_installed(client, tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    r = await client.get("/api/packages/medical-wikimed/status")
+    assert r.status_code == 200
+    assert r.json()["status"] == "not_installed"
+
+
+# ── POST /api/packages/{id}/install ──────────────────────────────────────────
+
+async def test_install_returns_404_for_unknown_module(client, tmp_settings):
+    _seed(tmp_settings)
+    r = await client.post("/api/packages/nonexistent/install")
+    assert r.status_code == 404
+
+
+async def test_install_returns_409_when_download_active(client, tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    pkg_service._active_tasks["other"] = object()
+    r = await client.post("/api/packages/medical-wikimed/install")
+    assert r.status_code == 409
+
+
+# ── POST /api/packages/{id}/cancel ───────────────────────────────────────────
+
+async def test_cancel_returns_404_when_not_downloading(client, tmp_settings):
+    _seed(tmp_settings)
+    r = await client.post("/api/packages/medical-wikimed/cancel")
+    assert r.status_code == 404
+
+
+# ── POST /api/packages/{id}/uninstall ────────────────────────────────────────
+
+async def test_uninstall_endpoint_returns_204(client, tmp_settings, monkeypatch):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc")
+    _seed(tmp_settings, [m])
+
+    async def _noop(*a): pass
+    monkeypatch.setattr(pkg_service, "uninstall_module", _noop)
+    r = await client.post("/api/packages/medical-wikimed/uninstall")
+    assert r.status_code == 204
+
+
+async def test_uninstall_endpoint_returns_404_for_unknown(client, tmp_settings):
+    _seed(tmp_settings)
+    r = await client.post("/api/packages/nonexistent/uninstall")
+    assert r.status_code == 404
+
+
+# ── POST /api/packages/{id}/activate ─────────────────────────────────────────
+
+async def test_activate_endpoint_returns_204(client, tmp_settings, monkeypatch):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=False)
+    _seed(tmp_settings, [m])
+
+    async def _noop(*a): pass
+    monkeypatch.setattr(pkg_service, "activate_module", _noop)
+    r = await client.post("/api/packages/medical-wikimed/activate")
+    assert r.status_code == 204
+
+
+# ── POST /api/packages/{id}/deactivate ───────────────────────────────────────
+
+async def test_deactivate_endpoint_returns_204(client, tmp_settings, monkeypatch):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
+    _seed(tmp_settings, [m])
+
+    async def _noop(*a): pass
+    monkeypatch.setattr(pkg_service, "deactivate_module", _noop)
+    r = await client.post("/api/packages/medical-wikimed/deactivate")
+    assert r.status_code == 204
