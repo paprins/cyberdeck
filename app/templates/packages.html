@@ -73,7 +73,8 @@
     <span class="font-body text-[10px] text-amber whitespace-nowrap">→ {{ m.latest_version }}</span>
     <div class="flex gap-[6px] flex-shrink-0">
       <button @click="act('/api/packages/{{ m.id }}/install')"
-              class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-amber border-amber-mid bg-amber-ghost">
+              class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-amber border-amber-mid bg-amber-ghost"
+              {% if has_active_download %}disabled style="opacity:.4;cursor:not-allowed"{% endif %}>
         Update
       </button>
       <button @click="act('/api/packages/{{ m.id }}/uninstall')"
@@ -158,7 +159,8 @@
       <template x-if="status === 'interrupted'">
         <div class="flex gap-[6px]">
           <button @click="act('/api/packages/{{ m.id }}/install')"
-                  class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-tile-survival border-tile-survival/40">
+                  class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-tile-survival border-tile-survival/40"
+                  {% if has_active_download %}disabled style="opacity:.4;cursor:not-allowed"{% endif %}>
             Resume
           </button>
           <button @click="act('/api/packages/{{ m.id }}/uninstall')"

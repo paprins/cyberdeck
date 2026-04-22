@@ -45,7 +45,7 @@ def get_download_status(module: Module, settings: Settings) -> dict:
         }
 
     bytes_downloaded = part.stat().st_size if part.exists() else 0
-    pct = int(bytes_downloaded * 100 / total_bytes) if total_bytes > 0 else 0
+    pct = min(int(bytes_downloaded * 100 / total_bytes), 100) if total_bytes > 0 else 0
 
     if module.id in _active_tasks:
         return {
@@ -197,6 +197,10 @@ async def _download_task(module: Module, settings: Settings) -> None:
                 "GET", module.download_url, headers=headers, timeout=30.0
             ) as r:
                 r.raise_for_status()
+                if offset > 0 and r.status_code == 200:
+                    part.unlink(missing_ok=True)
+                    part.parent.mkdir(parents=True, exist_ok=True)
+                    offset = 0
                 with part.open("ab") as f:
                     async for chunk in r.aiter_bytes(65536):
                         f.write(chunk)
@@ -228,6 +232,9 @@ async def _download_task(module: Module, settings: Settings) -> None:
 
     except asyncio.CancelledError:
         raise
+    except ValueError:
+        part.unlink(missing_ok=True)
+        log.exception("Checksum failure for %s — clearing .part", module.id)
     except Exception:
         log.exception("Download failed for %s", module.id)
     finally:
