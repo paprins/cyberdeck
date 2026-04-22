@@ -156,3 +156,66 @@ async def test_deactivate_sets_active_false(tmp_settings, monkeypatch):
     monkeypatch.setattr(pkg_service, "_signal_service", lambda *a: None)
     await pkg_service.deactivate_module(m, tmp_settings)
     assert load_registry(tmp_settings).modules[0].active is False
+
+
+# ── start_download ────────────────────────────────────────────────────────────
+
+async def test_start_download_raises_if_already_active(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    pkg_service._active_tasks["other-module"] = object()
+    with pytest.raises(RuntimeError, match="already active"):
+        await pkg_service.start_download(m, tmp_settings)
+
+
+async def test_start_download_raises_if_no_url(tmp_settings):
+    m = _mod(download_url=None)
+    _seed(tmp_settings, [m])
+    with pytest.raises(ValueError, match="no download_url"):
+        await pkg_service.start_download(m, tmp_settings)
+
+
+# ── check_for_updates ─────────────────────────────────────────────────────────
+
+async def test_check_for_updates_merges_manifest(tmp_settings, monkeypatch):
+    _seed(tmp_settings)
+    manifest = [
+        {
+            "id": "medical-wikimed",
+            "display_name": "WikiMed",
+            "category": "medical",
+            "description": "Medical",
+            "latest_version": "2024-10",
+            "size_gb": 0.8,
+            "checksum": "sha256:abc",
+            "download_url": "https://example.com/wikimed.zim",
+        }
+    ]
+
+    class _Resp:
+        def raise_for_status(self): pass
+        def json(self): return manifest
+
+    class _FakeClient:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        async def get(self, url, timeout=None): return _Resp()
+
+    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _FakeClient)
+    count = await pkg_service.check_for_updates(tmp_settings)
+    assert count == 1
+    assert len(load_registry(tmp_settings).modules) == 1
+
+
+async def test_check_for_updates_raises_on_network_error(tmp_settings, monkeypatch):
+    _seed(tmp_settings)
+
+    class _ErrorClient:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        async def get(self, url, timeout=None):
+            raise httpx.RequestError("connection refused")
+
+    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _ErrorClient)
+    with pytest.raises(httpx.RequestError):
+        await pkg_service.check_for_updates(tmp_settings)

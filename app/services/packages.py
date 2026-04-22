@@ -157,3 +157,78 @@ async def cancel_download(module_id: str) -> None:
         except asyncio.CancelledError:
             pass
     _active_tasks.pop(module_id, None)
+
+
+# ── start_download / check_for_updates ───────────────────────────────────────
+
+async def start_download(module: Module, settings: Settings) -> None:
+    if _active_tasks:
+        raise RuntimeError("A download is already active")
+    if not module.download_url:
+        raise ValueError(f"Module {module.id} has no download_url")
+    task = asyncio.create_task(_download_task(module, settings))
+    _active_tasks[module.id] = task
+
+
+async def check_for_updates(settings: Settings) -> int:
+    registry = load_registry(settings)
+    async with httpx.AsyncClient() as client:
+        r = await client.get(registry.update_server, timeout=10.0)
+        r.raise_for_status()
+        remote_modules = r.json()
+    before_ids = {m.id for m in load_registry(settings).modules}
+    before_versions = {m.id: m.latest_version for m in load_registry(settings).modules}
+    merge_remote_manifest(settings, remote_modules)
+    after = load_registry(settings).modules
+    return sum(
+        1 for m in after
+        if m.id not in before_ids or m.latest_version != before_versions.get(m.id)
+    )
+
+
+async def _download_task(module: Module, settings: Settings) -> None:
+    part = _part_path(module, settings)
+    part.parent.mkdir(parents=True, exist_ok=True)
+    offset = part.stat().st_size if part.exists() else 0
+    try:
+        async with httpx.AsyncClient() as client:
+            headers = {"Range": f"bytes={offset}-"} if offset > 0 else {}
+            async with client.stream(
+                "GET", module.download_url, headers=headers, timeout=30.0
+            ) as r:
+                r.raise_for_status()
+                with part.open("ab") as f:
+                    async for chunk in r.aiter_bytes(65536):
+                        f.write(chunk)
+
+        sha = hashlib.sha256()
+        with part.open("rb") as f:
+            for chunk in iter(lambda: f.read(65536), b""):
+                sha.update(chunk)
+        digest = f"sha256:{sha.hexdigest()}"
+        if digest != module.checksum:
+            raise ValueError(f"Checksum mismatch: expected {module.checksum}, got {digest}")
+
+        final = _final_path(module, settings)
+        final.parent.mkdir(parents=True, exist_ok=True)
+        part.rename(final)
+
+        registry = load_registry(settings)
+        for m in registry.modules:
+            if m.id == module.id:
+                m.installed_version = module.latest_version
+                m.installed_checksum = module.checksum
+                m.active = True
+                break
+        save_registry(settings, registry)
+
+        if module.category != "maps":
+            _kiwix_add(module, settings)
+        _signal_service(module)
+
+    except asyncio.CancelledError:
+        raise
+    except Exception:
+        log.exception("Download failed for %s", module.id)
+    finally:
+        _active_tasks.pop(module.id, None)
