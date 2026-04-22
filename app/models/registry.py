@@ -13,6 +13,7 @@ class Module(BaseModel):
     checksum: str
     installed_version: Optional[str] = None
     installed_checksum: Optional[str] = None
+    download_url: Optional[str] = None
     active: bool = False
 
     @computed_field

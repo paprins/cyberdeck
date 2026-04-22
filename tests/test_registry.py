@@ -197,3 +197,32 @@ def test_merge_remote_manifest_preserves_installed_state(tmp_settings):
     assert m.latest_version == "2024-11"
     assert m.installed_version == "2024-10"
     assert m.active is True
+
+
+def test_module_download_url_defaults_to_none():
+    m = Module(
+        id="medical-wikimed",
+        display_name="WikiMed",
+        category="medical",
+        description="",
+        latest_version="2024-10",
+        size_gb=0.8,
+        checksum="sha256:abc",
+    )
+    assert m.download_url is None
+
+
+def test_module_download_url_round_trips():
+    m = Module(
+        id="medical-wikimed",
+        display_name="WikiMed",
+        category="medical",
+        description="",
+        latest_version="2024-10",
+        size_gb=0.8,
+        checksum="sha256:abc",
+        download_url="https://example.com/wikimed.zim",
+    )
+    data = m.model_dump_json()
+    m2 = Module.model_validate_json(data)
+    assert m2.download_url == "https://example.com/wikimed.zim"
