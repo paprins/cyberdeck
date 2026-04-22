@@ -8,7 +8,7 @@ import httpx
 from app.config import Settings
 from app.main import create_app
 from app.models.registry import Module, Registry
-from app.services.registry import save_registry
+from app.services.registry import load_registry, save_registry
 import app.services.packages as pkg_service
 
 
@@ -103,3 +103,56 @@ def test_get_storage_info_returns_used_and_free(tmp_settings):
     assert "free_bytes" in result
     assert result["used_bytes"] > 0
     assert result["free_bytes"] > 0
+
+
+# ── uninstall_module ──────────────────────────────────────────────────────────
+
+async def test_uninstall_deletes_final_file(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    zim = tmp_settings.zim_dir / "medical-wikimed.zim"
+    zim.parent.mkdir(parents=True, exist_ok=True)
+    zim.write_bytes(b"content")
+    await pkg_service.uninstall_module(m, tmp_settings)
+    assert not zim.exists()
+
+
+async def test_uninstall_deletes_part_file_if_present(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"partial")
+    await pkg_service.uninstall_module(m, tmp_settings)
+    assert not part.exists()
+
+
+async def test_uninstall_clears_registry_fields(tmp_settings):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
+    _seed(tmp_settings, [m])
+    await pkg_service.uninstall_module(m, tmp_settings)
+    reg = load_registry(tmp_settings)
+    updated = reg.modules[0]
+    assert updated.installed_version is None
+    assert updated.installed_checksum is None
+    assert updated.active is False
+
+
+# ── activate / deactivate ─────────────────────────────────────────────────────
+
+async def test_activate_sets_active_true(tmp_settings, monkeypatch):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=False)
+    _seed(tmp_settings, [m])
+    monkeypatch.setattr(pkg_service, "_kiwix_add", lambda *a: None)
+    monkeypatch.setattr(pkg_service, "_signal_service", lambda *a: None)
+    await pkg_service.activate_module(m, tmp_settings)
+    assert load_registry(tmp_settings).modules[0].active is True
+
+
+async def test_deactivate_sets_active_false(tmp_settings, monkeypatch):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
+    _seed(tmp_settings, [m])
+    monkeypatch.setattr(pkg_service, "_kiwix_remove", lambda *a: None)
+    monkeypatch.setattr(pkg_service, "_signal_service", lambda *a: None)
+    await pkg_service.deactivate_module(m, tmp_settings)
+    assert load_registry(tmp_settings).modules[0].active is False

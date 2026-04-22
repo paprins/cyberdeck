@@ -74,3 +74,86 @@ def get_download_status(module: Module, settings: Settings) -> dict:
 def get_storage_info(settings: Settings) -> dict:
     usage = shutil.disk_usage(settings.data_dir)
     return {"used_bytes": usage.used, "free_bytes": usage.free}
+
+
+# ── Install / uninstall / activate / deactivate ───────────────────────────────
+
+async def uninstall_module(module: Module, settings: Settings) -> None:
+    await cancel_download(module.id)
+    part = _part_path(module, settings)
+    final = _final_path(module, settings)
+    if part.exists():
+        part.unlink()
+    if final.exists():
+        final.unlink()
+    if module.category != "maps":
+        _kiwix_remove(module, settings)
+    _signal_service(module)
+    registry = load_registry(settings)
+    for m in registry.modules:
+        if m.id == module.id:
+            m.installed_version = None
+            m.installed_checksum = None
+            m.active = False
+            break
+    save_registry(settings, registry)
+
+
+async def activate_module(module: Module, settings: Settings) -> None:
+    from app.services.registry import set_module_active
+    set_module_active(settings, module.id, True)
+    if module.category != "maps":
+        _kiwix_add(module, settings)
+    _signal_service(module)
+
+
+async def deactivate_module(module: Module, settings: Settings) -> None:
+    from app.services.registry import set_module_active
+    set_module_active(settings, module.id, False)
+    if module.category != "maps":
+        _kiwix_remove(module, settings)
+    _signal_service(module)
+
+
+# ── Kiwix and service signals ─────────────────────────────────────────────────
+
+def _kiwix_add(module: Module, settings: Settings) -> None:
+    library_xml = settings.zim_dir / "library.xml"
+    zim_path = settings.zim_dir / f"{module.id}.zim"
+    if not library_xml.exists() or not zim_path.exists():
+        return
+    _run(["kiwix-manage", str(library_xml), "add", str(zim_path)])
+    _run(["pkill", "-HUP", "kiwix-serve"])
+
+
+def _kiwix_remove(module: Module, settings: Settings) -> None:
+    library_xml = settings.zim_dir / "library.xml"
+    if not library_xml.exists():
+        return
+    _run(["kiwix-manage", str(library_xml), "delete", module.id])
+    _run(["pkill", "-HUP", "kiwix-serve"])
+
+
+def _signal_service(module: Module) -> None:
+    if module.category == "maps":
+        _run(["pkill", "-HUP", "mbtileserver"])
+
+
+def _run(cmd: list[str]) -> None:
+    try:
+        subprocess.run(cmd, check=False, capture_output=True)
+    except FileNotFoundError:
+        pass
+
+
+# ── cancel_download (needed by uninstall) ─────────────────────────────────────
+
+async def cancel_download(module_id: str) -> None:
+    task = _active_tasks.get(module_id)
+    if task and not task.done():
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+    _active_tasks.pop(module_id, None)
