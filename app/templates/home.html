@@ -4,7 +4,8 @@
 {% block content %}
 <!-- Search bar -->
 <div
-  class="px-[10px] pt-2 flex-shrink-0 relative"
+  class="px-4 pt-3 pb-3 flex-shrink-0 relative"
+  style="border-bottom: 1px solid var(--color-border);"
   x-data="{
     searchQuery: '',
     searchResults: [],
@@ -19,8 +20,8 @@
     }
   }"
 >
-  <div class="flex items-center gap-[10px] bg-surface border border-border rounded-lg px-4 py-[10px]">
-    <span class="text-text-lo text-[14px]">⌕</span>
+  <div class="flex items-center gap-[10px] bg-surface border border-border rounded-tile px-4 py-[10px]">
+    <span class="text-text-lo text-[13px]">⌕</span>
     <input
       id="search"
       type="text"
@@ -28,17 +29,17 @@
       @input.debounce.300ms="search()"
       @keydown.escape="searchResults = []; searchOpen = false"
       placeholder="Search knowledge bases…"
-      class="flex-1 bg-transparent font-display text-[14px] text-text-lo placeholder-text-lo outline-none tracking-[0.02em]"
+      class="flex-1 bg-transparent font-display text-[13px] text-text-lo placeholder-text-lo outline-none tracking-[0.02em]"
       autocomplete="off"
     >
-    <span class="text-[11px] text-text-lo tracking-[0.08em] bg-[oklch(22%_0.006_90)] border border-border px-2 py-[2px] rounded">Ctrl+K</span>
+    <span class="text-[10px] text-text-lo tracking-[0.08em] bg-elevated border border-border px-2 py-[2px] rounded-tile">Ctrl+K</span>
   </div>
 
   <!-- Results dropdown -->
   <div
     x-show="searchOpen && searchResults.length > 0"
     x-cloak
-    class="absolute left-[10px] right-[10px] mt-[2px] bg-surface border border-border rounded-lg overflow-hidden z-10"
+    class="absolute left-4 right-4 mt-[2px] bg-surface border border-border rounded-tile overflow-hidden z-10"
   >
     <template x-for="result in searchResults" :key="result.title + result.module">
       <a
@@ -46,8 +47,8 @@
         class="flex items-center gap-3 px-4 py-[10px] border-b border-border last:border-b-0 hover:bg-elevated"
         @click="searchOpen = false; searchQuery = ''"
       >
-        <span class="text-text-lo text-[11px] tracking-[0.06em] uppercase font-display min-w-[80px]" x-text="result.module"></span>
-        <span class="text-text-hi text-[14px] font-body truncate" x-text="result.title"></span>
+        <span class="text-text-lo text-[10px] tracking-[0.08em] uppercase font-display min-w-[80px]" x-text="result.module"></span>
+        <span class="text-text-hi text-[13px] font-body truncate" x-text="result.title"></span>
       </a>
     </template>
   </div>
@@ -56,7 +57,7 @@
 <!-- Bento grid -->
 <div class="flex-1 p-[10px] min-h-0">
   <div
-    class="grid w-full h-full gap-[10px]"
+    class="grid w-full h-full gap-[8px]"
     style="
       grid-template-areas: {{ layout.grid_template_areas }};
       grid-template-columns: repeat({{ layout.columns }}, 1fr);
@@ -66,9 +67,8 @@
     {% if layout.empty %}
     <div style="grid-area: empty" class="flex items-center justify-center">
       <div class="text-center">
-        <div class="text-[48px] mb-4">📦</div>
-        <div class="font-display font-bold text-[22px] uppercase tracking-[0.05em] text-text-mid mb-2">No modules active</div>
-        <a href="/packages" class="font-body text-[14px] text-tile-packages hover:text-text-hi underline underline-offset-2">Open Packages to install content</a>
+        <div class="font-display font-bold text-[18px] uppercase tracking-[0.10em] text-text-mid mb-3">NO_MODULES_ACTIVE</div>
+        <a href="/packages" class="font-display text-[11px] tracking-[0.08em] uppercase text-amber hover:text-text-hi">OPEN_PACKAGES →</a>
       </div>
     </div>
     {% else %}

@@ -2,100 +2,103 @@
 
 {% block content %}
 {% set icons = {
-  'medical': '🏥', 'maps': '🗺️', 'survival': '🪓', 'food': '🌿',
+  'medical': '🏥', 'maps': '🗺', 'survival': '🪓', 'food': '🌿',
   'encyclopedia': '📖', 'packages': '📦', 'internet': '🌐',
 } %}
 
-<!-- Page header + check-updates button -->
+<!-- Page header -->
 <div
-  class="flex-shrink-0 border-b border-border"
+  class="flex-shrink-0"
+  style="border-bottom: 1px solid var(--color-border);"
   x-data="{ checking: false, checkError: '' }"
 >
-  <div class="px-4 py-3 flex items-center justify-between">
-    <span class="font-display font-bold text-[13px] uppercase tracking-[0.14em] text-text-hi">📦 Packages</span>
+  <div class="px-5 py-4 flex items-center justify-between">
+    <div class="font-display font-bold text-[13px] uppercase tracking-[0.14em] text-text-hi">PACKAGES</div>
     <button
-      class="font-display text-[10px] uppercase tracking-[0.08em] text-amber border border-amber-ghost px-3 py-[5px] rounded-[5px]"
+      class="font-display text-[10px] uppercase tracking-[0.08em] text-amber border border-amber-ghost px-3 py-[6px] rounded-tile"
       :disabled="checking"
-      :class="checking ? 'opacity-50' : ''"
+      :class="checking ? 'opacity-50' : 'hover:bg-amber-ghost'"
       @click="
         checking = true; checkError = '';
         fetch('/api/packages/check-updates', {method: 'POST'})
-          .then(r => { if (r.ok) location.reload(); else { checkError = 'Update check failed'; } })
-          .catch(() => { checkError = 'Network error'; })
+          .then(r => { if (r.ok) location.reload(); else { checkError = 'UPDATE_CHECK_FAILED'; } })
+          .catch(() => { checkError = 'NETWORK_ERROR'; })
           .finally(() => { checking = false; setTimeout(() => checkError = '', 3000); })
       "
     >
-      <span x-show="!checking">↻ Check for updates</span>
-      <span x-show="checking" x-cloak>Checking…</span>
+      <span x-show="!checking">↻ CHECK_UPDATES</span>
+      <span x-show="checking" x-cloak>CHECKING…</span>
     </button>
   </div>
-  <div x-show="checkError" x-cloak class="px-4 pb-2">
-    <span x-text="checkError" class="font-body text-[11px] text-tile-medical"></span>
+  <div x-show="checkError" x-cloak class="px-5 pb-3">
+    <span x-text="checkError" class="font-display text-[10px] tracking-[0.06em] text-tile-medical"></span>
   </div>
 </div>
 
 <!-- Storage bar -->
-<div class="px-4 py-2 flex items-center gap-3 flex-shrink-0 border-b border-border">
-  <span class="font-display text-[10px] uppercase tracking-[0.1em] text-text-lo whitespace-nowrap">Storage</span>
-  <div class="flex-1 h-[5px] bg-elevated rounded-full overflow-hidden">
+<div class="px-5 py-3 flex items-center gap-3 flex-shrink-0"
+     style="border-bottom: 1px solid var(--color-border);">
+  <span class="font-display text-[9px] uppercase tracking-[0.12em] text-text-lo whitespace-nowrap">Storage</span>
+  <div class="flex-1 h-[3px] bg-elevated rounded-full overflow-hidden">
     <div class="h-full bg-tile-maps rounded-full"
          style="width: {{ [(storage.used_bytes / (storage.used_bytes + storage.free_bytes) * 100) | int, 100] | min }}%"></div>
   </div>
   <span class="font-body text-[10px] text-text-lo whitespace-nowrap">
-    {{ "%.0f"|format(storage.used_bytes / 1e9) }} GB used · {{ "%.0f"|format(storage.free_bytes / 1e9) }} GB free
+    {{ "%.0f"|format(storage.used_bytes / 1e9) }} GB · {{ "%.0f"|format(storage.free_bytes / 1e9) }} GB free
   </span>
 </div>
+
 
 <!-- Scrollable module list -->
 <div class="flex-1 overflow-y-auto px-4 pb-4">
 
-  <!-- ── Updates section ─────────────────────────────────────────── -->
+  <!-- ── Updates section ── -->
   {% if updates %}
-  <div class="flex items-center gap-2 pt-3 pb-[6px] font-display text-[10px] uppercase tracking-[0.12em] font-bold text-amber">
-    ▸ Updates available
-    <span class="text-[9px] px-[6px] py-[1px] rounded-[10px] bg-amber-ghost text-amber">{{ updates | length }}</span>
+  <div class="flex items-center gap-2 pt-4 pb-[6px] font-display text-[10px] uppercase tracking-[0.14em] font-bold text-amber">
+    UPDATES_AVAILABLE
+    <span class="text-[9px] px-[6px] py-[1px] rounded-[2px] bg-amber-ghost text-amber">{{ updates | length }}</span>
   </div>
   {% for m in updates %}
   {% set s = module_statuses[m.id] %}
-  <div class="flex items-center gap-[10px] px-3 py-[10px] rounded-lg mb-1 border"
-       style="background: oklch(13% 0.015 75); border-color: oklch(25% 0.04 75);"
+  <div class="flex items-center gap-[10px] px-3 py-[10px] rounded-tile mb-1 border"
+       style="background: oklch(13% 0.012 44); border-color: oklch(25% 0.06 44);"
        x-data="{
          async act(url) {
            await fetch(url, {method: 'POST'});
            location.reload();
          }
        }">
-    <span class="text-[20px] w-7 text-center flex-shrink-0">{{ icons.get(m.category, '▪') }}</span>
+    <span class="text-[18px] w-7 text-center flex-shrink-0">{{ icons.get(m.category, '▪') }}</span>
     <div class="flex-1 min-w-0">
-      <div class="font-display font-bold text-[13px] text-text-hi truncate">{{ m.display_name }}</div>
-      <div class="font-body text-[10px] text-text-lo mt-[2px]">{{ "%.1f"|format(m.size_gb) }} GB · installed {{ m.installed_version }}</div>
+      <div class="font-display font-bold text-[12px] text-text-hi truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
+      <div class="font-body text-[10px] text-text-lo mt-[2px]">{{ "%.1f"|format(m.size_gb) }} GB · v{{ m.installed_version }}</div>
     </div>
-    <span class="font-body text-[10px] text-amber whitespace-nowrap">→ {{ m.latest_version }}</span>
+    <span class="font-display text-[10px] text-amber whitespace-nowrap tracking-[0.04em]">→ v{{ m.latest_version }}</span>
     <div class="flex gap-[6px] flex-shrink-0">
       <button @click="act('/api/packages/{{ m.id }}/install')"
-              class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-amber border-amber-mid bg-amber-ghost"
+              class="font-display text-[10px] font-bold px-2 py-[4px] rounded-tile border text-amber border-amber-mid bg-amber-ghost"
               {% if has_active_download %}disabled style="opacity:.4;cursor:not-allowed"{% endif %}>
-        Update
+        UPDATE
       </button>
-      <button @click="act('/api/packages/{{ m.id }}/uninstall')"
-              class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-tile-medical border-tile-medical/40">
-        Remove
+      <button @click="$dispatch('confirm-delete', {id: '{{ m.id }}', name: '{{ m.display_name }}'})"
+              class="font-display text-[10px] font-bold px-2 py-[4px] rounded-tile border text-tile-medical border-tile-medical/40">
+        REMOVE
       </button>
     </div>
   </div>
   {% endfor %}
   {% endif %}
 
-  <!-- ── Installed section ───────────────────────────────────────── -->
+  <!-- ── Installed section ── -->
   {% if installed %}
-  <div class="flex items-center gap-2 pt-3 pb-[6px] font-display text-[10px] uppercase tracking-[0.12em] font-bold text-tile-maps">
-    ▸ Installed
-    <span class="text-[9px] px-[6px] py-[1px] rounded-[10px] bg-elevated text-text-lo">{{ installed | length }}</span>
+  <div class="flex items-center gap-2 pt-4 pb-[6px] font-display text-[10px] uppercase tracking-[0.14em] font-bold text-tile-maps">
+    INSTALLED
+    <span class="text-[9px] px-[6px] py-[1px] rounded-[2px] bg-elevated text-text-lo">{{ installed | length }}</span>
   </div>
   {% for m in installed %}
   {% set s = module_statuses[m.id] %}
   <div
-    class="flex items-center gap-[10px] px-3 py-[10px] rounded-lg mb-1 bg-surface"
+    class="flex items-center gap-[10px] px-3 py-[10px] rounded-tile mb-1 bg-surface"
     x-data="{
       status: '{{ s.status }}',
       pct: {{ s.pct }},
@@ -123,12 +126,12 @@
       }
     }"
   >
-    <span class="text-[20px] w-7 text-center flex-shrink-0">{{ icons.get(m.category, '▪') }}</span>
+    <span class="text-[18px] w-7 text-center flex-shrink-0">{{ icons.get(m.category, '▪') }}</span>
 
     <!-- Downloading -->
-    <div class="flex-1 min-w-0" x-show="status === 'downloading'">
-      <div class="font-display font-bold text-[13px] text-text-hi truncate">{{ m.display_name }}</div>
-      <div class="h-[5px] bg-elevated rounded-full mt-[5px] overflow-hidden">
+    <div class="flex-1 min-w-0" x-show="status === 'downloading'" x-cloak>
+      <div class="font-display font-bold text-[12px] text-text-hi truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
+      <div class="h-[3px] bg-elevated rounded-full mt-[6px] overflow-hidden">
         <div class="h-full bg-amber rounded-full" :style="'width:' + pct + '%'"></div>
       </div>
       <div class="font-body text-[10px] text-text-lo mt-[3px]"
@@ -137,54 +140,54 @@
 
     <!-- Interrupted -->
     <div class="flex-1 min-w-0" x-show="status === 'interrupted'" x-cloak>
-      <div class="font-display font-bold text-[13px] text-text-hi truncate">{{ m.display_name }}</div>
+      <div class="font-display font-bold text-[12px] text-text-hi truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
       <div class="font-body text-[10px] text-tile-survival mt-[2px]"
-           x-text="'⚠ Interrupted · ' + (bytes_dl/1e9).toFixed(1) + ' GB of ' + (total/1e9).toFixed(1) + ' GB'"></div>
+           x-text="'⚠ INTERRUPTED · ' + (bytes_dl/1e9).toFixed(1) + ' GB of ' + (total/1e9).toFixed(1) + ' GB'"></div>
     </div>
 
     <!-- Installed -->
-    <div class="flex-1 min-w-0" x-show="status === 'installed'" x-cloak>
-      <div class="font-display font-bold text-[13px] text-text-hi truncate">{{ m.display_name }}</div>
-      <div class="font-body text-[10px] text-text-lo mt-[2px]">{{ "%.1f"|format(m.size_gb) }} GB · {{ m.installed_version }}</div>
+    <div class="flex-1 min-w-0" x-show="status === 'installed' || status === 'not_installed'" x-cloak>
+      <div class="font-display font-bold text-[12px] text-text-hi truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
+      <div class="font-body text-[10px] text-text-lo mt-[2px]">{{ "%.1f"|format(m.size_gb) }} GB · v{{ m.installed_version }}</div>
     </div>
 
     <!-- Actions -->
     <div class="flex gap-[6px] flex-shrink-0">
       <template x-if="status === 'downloading'">
         <button @click="act('/api/packages/{{ m.id }}/cancel')"
-                class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-text-lo border-border">
-          Cancel
+                class="font-display text-[10px] font-bold px-2 py-[4px] rounded-tile border text-text-lo border-border">
+          CANCEL
         </button>
       </template>
       <template x-if="status === 'interrupted'">
         <div class="flex gap-[6px]">
           <button @click="act('/api/packages/{{ m.id }}/install')"
-                  class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-tile-survival border-tile-survival/40"
+                  class="font-display text-[10px] font-bold px-2 py-[4px] rounded-tile border text-tile-survival border-tile-survival/40"
                   {% if has_active_download %}disabled style="opacity:.4;cursor:not-allowed"{% endif %}>
-            Resume
+            RESUME
           </button>
-          <button @click="act('/api/packages/{{ m.id }}/uninstall')"
-                  class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-tile-medical border-tile-medical/40">
-            Remove
+          <button @click="$dispatch('confirm-delete', {id: '{{ m.id }}', name: '{{ m.display_name }}'})"
+                  class="font-display text-[10px] font-bold px-2 py-[4px] rounded-tile border text-tile-medical border-tile-medical/40">
+            REMOVE
           </button>
         </div>
       </template>
-      <template x-if="status === 'installed'">
+      <template x-if="status === 'installed' || status === 'not_installed'">
         <div class="flex gap-[6px]">
           {% if m.active %}
           <button @click="act('/api/packages/{{ m.id }}/deactivate')"
-                  class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-tile-maps border-tile-maps/40">
-            Active
+                  class="font-display text-[10px] font-bold px-2 py-[4px] rounded-tile border text-tile-maps border-tile-maps/40">
+            ACTIVE
           </button>
           {% else %}
           <button @click="act('/api/packages/{{ m.id }}/activate')"
-                  class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-text-lo border-border">
-            Activate
+                  class="font-display text-[10px] font-bold px-2 py-[4px] rounded-tile border text-text-lo border-border">
+            ACTIVATE
           </button>
           {% endif %}
-          <button @click="act('/api/packages/{{ m.id }}/uninstall')"
-                  class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-tile-medical border-tile-medical/40">
-            Remove
+          <button @click="$dispatch('confirm-delete', {id: '{{ m.id }}', name: '{{ m.display_name }}'})"
+                  class="font-display text-[10px] font-bold px-2 py-[4px] rounded-tile border text-tile-medical border-tile-medical/40">
+            REMOVE
           </button>
         </div>
       </template>
@@ -193,27 +196,54 @@
   {% endfor %}
   {% endif %}
 
-  <!-- ── Available section ───────────────────────────────────────── -->
+  <!-- ── Available section ── -->
   {% if available %}
-  <div class="flex items-center gap-2 pt-3 pb-[6px] font-display text-[10px] uppercase tracking-[0.12em] font-bold text-text-lo">
-    ▸ Available
-    <span class="text-[9px] px-[6px] py-[1px] rounded-[10px] bg-elevated text-text-lo">{{ available | length }}</span>
+  <div class="flex items-center gap-2 pt-4 pb-[6px] font-display text-[10px] uppercase tracking-[0.14em] font-bold text-text-lo">
+    AVAILABLE
+    <span class="text-[9px] px-[6px] py-[1px] rounded-[2px] bg-elevated text-text-lo">{{ available | length }}</span>
   </div>
   {% for m in available %}
-  <div class="flex items-center gap-[10px] px-3 py-[10px] rounded-lg mb-1 border border-dashed border-border">
-    <span class="text-[20px] w-7 text-center flex-shrink-0 opacity-50">{{ icons.get(m.category, '▪') }}</span>
+  <div class="flex items-center gap-[10px] px-3 py-[10px] rounded-tile mb-1 border border-dashed border-border">
+    <span class="text-[18px] w-7 text-center flex-shrink-0 opacity-50">{{ icons.get(m.category, '▪') }}</span>
     <div class="flex-1 min-w-0">
-      <div class="font-display font-bold text-[13px] text-text-lo truncate">{{ m.display_name }}</div>
+      <div class="font-display font-bold text-[12px] text-text-mid truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
       <div class="font-body text-[10px] text-text-lo mt-[2px]">{{ "%.1f"|format(m.size_gb) }} GB</div>
     </div>
     <button
       onclick="fetch('/api/packages/{{ m.id }}/install', {method:'POST'}).then(()=>location.reload())"
-      class="font-display text-[10px] font-bold px-2 py-[3px] rounded border text-text-mid border-border flex-shrink-0"
+      class="font-display text-[10px] font-bold px-3 py-[4px] rounded-tile border text-text-mid border-border flex-shrink-0 hover:border-text-mid"
       {% if has_active_download %}disabled style="opacity:.4;cursor:not-allowed"{% endif %}
-    >Install</button>
+    >INSTALL</button>
   </div>
   {% endfor %}
   {% endif %}
 
+</div>
+
+<!-- Delete confirmation -->
+<div
+  x-data="{ open: false, moduleId: '', moduleName: '' }"
+  @confirm-delete.window="moduleId = $event.detail.id; moduleName = $event.detail.name; open = true"
+  x-show="open"
+  x-cloak
+  @keydown.escape.window="open = false"
+  @click.self="open = false"
+  style="position:fixed;inset:0;z-index:50;background:oklch(5% 0.003 50 / 0.88);display:flex;align-items:center;justify-content:center;padding:16px;"
+>
+  <div style="background:oklch(11% 0.006 50);border:1px solid oklch(35% 0.12 25);border-radius:4px;padding:24px;width:100%;max-width:320px;">
+    <div class="font-display font-bold text-[10px] uppercase tracking-[0.16em] text-amber mb-3">REMOVE_PACKAGE</div>
+    <p class="font-body text-[12px] text-text-mid mb-6"
+       x-text="'Remove ' + moduleName + '? This deletes the downloaded files and cannot be undone.'"></p>
+    <div class="flex gap-3">
+      <button
+        @click="open = false"
+        class="flex-1 font-display text-[10px] uppercase tracking-[0.08em] py-3 rounded-tile border border-border text-text-lo hover:bg-elevated"
+      >CANCEL</button>
+      <button
+        @click="fetch('/api/packages/' + moduleId + '/uninstall', {method:'POST'}).then(() => { open = false; location.reload(); })"
+        class="flex-1 font-display text-[10px] uppercase tracking-[0.08em] py-3 rounded-tile border border-tile-medical/50 text-tile-medical hover:bg-tile-medical/10"
+      >REMOVE</button>
+    </div>
+  </div>
 </div>
 {% endblock %}

@@ -2,20 +2,20 @@
 
 @theme {
   /* ── Surfaces ── */
-  --color-bg:       oklch(9% 0.005 90);
-  --color-surface:  oklch(15% 0.007 90);
-  --color-elevated: oklch(20% 0.010 90);
-  --color-border:   oklch(30% 0.008 90);
+  --color-bg:       oklch(8% 0.003 50);
+  --color-surface:  oklch(13% 0.005 50);
+  --color-elevated: oklch(19% 0.007 50);
+  --color-border:   oklch(27% 0.007 50);
 
-  /* ── Amber ── */
-  --color-amber:       oklch(80% 0.15 75);
-  --color-amber-mid:   oklch(68% 0.10 75);
-  --color-amber-ghost: oklch(35% 0.06 75);
+  /* ── Signal orange (operational accent) ── */
+  --color-amber:       oklch(63% 0.25 44);
+  --color-amber-mid:   oklch(48% 0.18 44);
+  --color-amber-ghost: oklch(20% 0.09 44);
 
   /* ── Text ── */
-  --color-text-hi:  oklch(92% 0.006 90);
-  --color-text-mid: oklch(66% 0.006 90);
-  --color-text-lo:  oklch(48% 0.005 90);
+  --color-text-hi:  oklch(93% 0.004 50);
+  --color-text-mid: oklch(65% 0.005 50);
+  --color-text-lo:  oklch(50% 0.005 50);
 
   /* ── Tile accents ── */
   --color-tile-medical:      oklch(68% 0.25 25);
@@ -31,7 +31,7 @@
   --font-body:    'Atkinson Hyperlegible', sans-serif;
 
   /* ── Shape ── */
-  --radius-tile: 16px;
+  --radius-tile: 4px;
 }
 
 @layer base {

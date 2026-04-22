@@ -191,7 +191,7 @@ async def _download_task(module: Module, settings: Settings) -> None:
     part.parent.mkdir(parents=True, exist_ok=True)
     offset = part.stat().st_size if part.exists() else 0
     try:
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(follow_redirects=True) as client:
             headers = {"Range": f"bytes={offset}-"} if offset > 0 else {}
             async with client.stream(
                 "GET", module.download_url, headers=headers, timeout=30.0

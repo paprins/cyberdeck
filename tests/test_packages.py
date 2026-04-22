@@ -271,7 +271,7 @@ async def test_packages_page_shows_updates_section_when_update_exists(client, tm
     )
     _seed(tmp_settings, [m])
     r = await client.get("/packages")
-    assert "Updates available" in r.text
+    assert "UPDATES_AVAILABLE" in r.text
 
 
 # ── POST /api/packages/check-updates ─────────────────────────────────────────
@@ -286,6 +286,24 @@ async def test_check_updates_returns_502_on_network_error(client, tmp_settings, 
     monkeypatch.setattr(pkg_router, "check_for_updates", _fail)
     r = await client.post("/api/packages/check-updates")
     assert r.status_code == 502
+
+
+# ── GET /api/packages/active-download ────────────────────────────────────────
+
+async def test_active_download_returns_null_when_idle(client, tmp_settings):
+    _seed(tmp_settings)
+    r = await client.get("/api/packages/active-download")
+    assert r.status_code == 200
+    assert r.json()["module_id"] is None
+
+
+async def test_active_download_returns_module_id_when_active(client, tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    pkg_service._active_tasks["medical-wikimed"] = object()
+    r = await client.get("/api/packages/active-download")
+    assert r.status_code == 200
+    assert r.json()["module_id"] == "medical-wikimed"
 
 
 # ── GET /api/packages/{id}/status ────────────────────────────────────────────

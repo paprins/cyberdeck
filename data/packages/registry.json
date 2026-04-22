@@ -1,4 +1,50 @@
 {
   "update_server": "https://updates.example.com/cyberdeck/manifest.json",
-  "modules": []
+  "modules": [
+    {
+      "id": "medical-wikimed",
+      "display_name": "WikiMed Medical Encyclopedia",
+      "category": "medical",
+      "description": "Offline medical and health reference based on Wikipedia's medical articles",
+      "latest_version": "2026-04",
+      "size_gb": 2.06,
+      "checksum": "sha256:6f67340a7cd7665bb57c27d2bbff97e26f2037477c9ea597345a118286820331",
+      "installed_version": "2026-04",
+      "installed_checksum": "sha256:6f67340a7cd7665bb57c27d2bbff97e26f2037477c9ea597345a118286820331",
+      "download_url": "https://download.kiwix.org/zim/wikipedia/wikipedia_en_medicine_maxi_2026-04.zim",
+      "active": true,
+      "is_installed": true,
+      "has_update": false
+    },
+    {
+      "id": "internet-ifixit",
+      "display_name": "iFixit Repair Guide",
+      "category": "internet",
+      "description": "Repair manuals for electronics, appliances, and more",
+      "latest_version": "2025-12",
+      "size_gb": 3.32,
+      "checksum": "sha256:9bb5f3408707fd0300c6ef47a425c3217187f144cd9154a928183816aa72eead",
+      "installed_version": "2025-12",
+      "installed_checksum": "sha256:9bb5f3408707fd0300c6ef47a425c3217187f144cd9154a928183816aa72eead",
+      "download_url": "https://download.kiwix.org/zim/ifixit/ifixit_en_all_2025-12.zim",
+      "active": true,
+      "is_installed": true,
+      "has_update": false
+    },
+    {
+      "id": "encyclopedia-wikipedia",
+      "display_name": "Wikipedia (English, no images)",
+      "category": "encyclopedia",
+      "description": "The complete English Wikipedia — text only, no images",
+      "latest_version": "2026-03",
+      "size_gb": 48.0,
+      "checksum": "sha256:0d0ff0cff37953886edca65a1fd5809eb77c96346d85c0fdd7f34eac55a1996e",
+      "installed_version": null,
+      "installed_checksum": null,
+      "download_url": "https://download.kiwix.org/zim/wikipedia/wikipedia_en_all_nopic_2026-03.zim",
+      "active": false,
+      "is_installed": false,
+      "has_update": false
+    }
+  ]
 }

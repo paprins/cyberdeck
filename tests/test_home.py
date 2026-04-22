@@ -52,7 +52,7 @@ async def test_home_shows_active_module_name(client, tmp_settings):
 
 async def test_home_shows_empty_state_when_no_active_modules(client):
     r = await client.get("/")
-    assert "No modules active" in r.text
+    assert "NO_MODULES_ACTIVE" in r.text
 
 
 async def test_home_packages_tile_always_rendered(client):
@@ -100,10 +100,10 @@ async def test_packages_tile_has_packages_url(client):
 
 async def test_empty_state_cta_links_to_packages(client):
     r = await client.get("/")
-    assert "No modules active" in r.text
+    assert "NO_MODULES_ACTIVE" in r.text
     # The CTA text should be a link, not just plain text
     assert '<a href="/packages"' in r.text
-    assert 'Open Packages to install content</a>' in r.text
+    assert 'OPEN_PACKAGES' in r.text
 
 
 async def test_chrome_has_no_modules_label(client):

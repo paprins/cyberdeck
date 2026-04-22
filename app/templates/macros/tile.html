@@ -1,21 +1,12 @@
 {% macro render_tile(tile, is_center=False) %}
 {%- set ICONS = {
   'medical':      '🏥',
-  'maps':         '🗺️',
+  'maps':         '🗺',
   'survival':     '🪓',
   'food':         '🌿',
   'encyclopedia': '📖',
   'packages':     '📦',
   'internet':     '🌐',
-} -%}
-{%- set ACCENT_BG = {
-  'medical':      'bg-tile-medical',
-  'maps':         'bg-tile-maps',
-  'survival':     'bg-tile-survival',
-  'food':         'bg-tile-food',
-  'encyclopedia': 'bg-tile-encyclopedia',
-  'packages':     'bg-tile-packages',
-  'internet':     'bg-tile-internet',
 } -%}
 {%- set ACCENT_TEXT = {
   'medical':      'text-tile-medical',
@@ -26,24 +17,37 @@
   'packages':     'text-tile-packages',
   'internet':     'text-tile-internet',
 } -%}
-{%- set bg = 'bg-elevated' if is_center else 'bg-surface' -%}
-{%- set icon_size = 'text-[52px]' if is_center else 'text-[30px]' -%}
-{%- set name_size = 'text-[30px]' if is_center else 'text-[18px]' -%}
-{%- set sub_size  = 'text-[14px]' if is_center else 'text-[12px]' -%}
 {%- set cat = tile.module.category -%}
 {%- set tag = 'a' if tile.url else 'div' -%}
+{%- set px = 'px-5' if is_center else 'px-4' -%}
+{%- set pt = 'pt-5' if is_center else 'pt-4' -%}
+{%- set name_size = 'text-[16px]' if is_center else 'text-[13px]' -%}
+{%- set icon_size = 'text-[20px]' if is_center else 'text-[16px]' -%}
+{%- set desc_size = 'text-[12px]' if is_center else 'text-[11px]' -%}
 <{{ tag }}
   {% if tile.url %}href="{{ tile.url }}"{% endif %}
-  class="{{ bg }} rounded-tile border border-border flex flex-col items-center justify-center text-center gap-[6px] relative overflow-hidden p-4{% if tile.url %} cursor-pointer hover:bg-border{% endif %}"
+  class="bg-surface border border-border rounded-tile flex flex-col relative overflow-hidden{% if tile.url %} cursor-pointer hover:bg-elevated{% endif %}"
   style="grid-area: {{ tile.grid_area }}"
 >
-  <div class="absolute top-0 left-0 right-0 h-[3px] rounded-t-tile {{ ACCENT_BG.get(cat, 'bg-text-lo') }}"></div>
-  <div class="{{ icon_size }} leading-none">{{ ICONS.get(cat, '▪') }}</div>
-  <div class="font-display font-bold uppercase tracking-[0.05em] {{ name_size }} leading-tight {{ ACCENT_TEXT.get(cat, 'text-text-hi') }}">
-    {{ tile.module.display_name }}
+  <!-- Title row -->
+  <div class="{{ px }} {{ pt }} pb-2 flex items-start justify-between gap-3">
+    <div class="font-display font-bold tracking-[0.05em] uppercase {{ name_size }} leading-tight text-text-hi flex-1 min-w-0">
+      {{ tile.module.display_name | replace(' ', '_') }}
+    </div>
+    <span class="{{ icon_size }} leading-none flex-shrink-0 mt-[1px]">{{ ICONS.get(cat, '▪') }}</span>
   </div>
-  <div class="font-body {{ sub_size }} text-text-mid leading-snug max-w-[90%]">
+
+  <!-- Description -->
+  <div class="{{ px }} flex-1 font-body {{ desc_size }} text-text-mid leading-snug">
     {{ tile.module.description }}
+  </div>
+
+  <!-- Footer -->
+  <div class="{{ px }} pt-3 pb-4 flex items-center justify-between">
+    <span class="font-display text-[9px] tracking-[0.12em] uppercase {{ ACCENT_TEXT.get(cat, 'text-text-lo') }}">{{ cat }}</span>
+    {% if tile.url %}
+    <span class="font-display text-[10px] tracking-[0.08em] uppercase text-text-lo">VIEW →</span>
+    {% endif %}
   </div>
 </{{ tag }}>
 {% endmacro %}

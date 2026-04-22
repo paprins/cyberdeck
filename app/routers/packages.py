@@ -66,6 +66,17 @@ def make_router(cfg: Settings) -> APIRouter:
             return JSONResponse({"error": str(e)}, status_code=502)
         return {"updated": count}
 
+    @router.get("/api/packages/active-download")
+    async def active_download():
+        if not _active_tasks:
+            return {"module_id": None}
+        module_id = next(iter(_active_tasks))
+        registry = load_registry(cfg)
+        module = next((m for m in registry.modules if m.id == module_id), None)
+        if module is None:
+            return {"module_id": module_id, "status": "downloading", "pct": 0, "bytes_downloaded": 0, "total_bytes": 0}
+        return {"module_id": module_id, **get_download_status(module, cfg)}
+
     @router.get("/api/packages/{module_id}/status")
     async def module_status(module_id: str):
         registry = load_registry(cfg)
