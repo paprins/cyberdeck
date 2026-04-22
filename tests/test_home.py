@@ -60,26 +60,6 @@ async def test_home_packages_tile_always_rendered(client):
     assert "Packages" in r.text
 
 
-async def test_home_active_count_in_chrome(client, tmp_settings):
-    reg = Registry(
-        update_server="https://example.com/manifest.json",
-        modules=[
-            Module(
-                id="maps-world", display_name="Maps", category="maps",
-                description="OSM", latest_version="2024-01",
-                size_gb=10, checksum="sha256:abc", active=True,
-            ),
-            Module(
-                id="medical-wikimed", display_name="Medical", category="medical",
-                description="WikiMed", latest_version="2024-01",
-                size_gb=0.8, checksum="sha256:def", active=True,
-            ),
-        ],
-    )
-    save_registry(tmp_settings, reg)
-    r = await client.get("/")
-    assert "2 active" in r.text
-
 
 async def test_maps_tile_has_mbtiles_url(client, tmp_settings):
     reg = Registry(
@@ -124,3 +104,19 @@ async def test_empty_state_cta_links_to_packages(client):
     # The CTA text should be a link, not just plain text
     assert '<a href="/packages"' in r.text
     assert 'Open Packages to install content</a>' in r.text
+
+
+async def test_chrome_has_no_modules_label(client):
+    r = await client.get("/")
+    assert "Modules" not in r.text
+
+
+async def test_chrome_wifi_no_text(client):
+    r = await client.get("/")
+    assert ">connected<" not in r.text
+    assert ">offline<" not in r.text
+
+
+async def test_chrome_has_no_updates_badge(client):
+    r = await client.get("/")
+    assert "bg-tile-survival" not in r.text

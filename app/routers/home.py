@@ -43,12 +43,8 @@ def make_router(cfg: Settings) -> APIRouter:
         layout = _with_urls(compute_layout(active_modules, wifi_connected=status.wifi_connected), cfg)
         return templates.TemplateResponse(request, "home.html", {
             "layout": layout,
-            "active_count": len(active_modules),
             "battery_pct": status.battery_pct,
-            "battery_charging": status.battery_charging,
             "wifi_connected": status.wifi_connected,
-            "updates_available": status.updates_available,
-            "uptime_s": status.uptime_s,
         })
 
     return router
