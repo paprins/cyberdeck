@@ -30,6 +30,9 @@ uv run pytest -k "test_merge_remote_manifest"
 
 # Run the dev server
 CYBERDECK_DATA_DIR=data uv run uvicorn app.main:app --reload --port 8000
+
+# Start companion content services (kiwix on :8080, mbtileserver on :8081)
+docker compose up
 ```
 
 All environment variables use the `CYBERDECK_` prefix (e.g. `CYBERDECK_DATA_DIR=/data`).

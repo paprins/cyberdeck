@@ -1,0 +1,18 @@
+services:
+  kiwix:
+    image: ghcr.io/kiwix/kiwix-serve:latest
+    command: --port 8080 /data/zim/
+    volumes:
+      - ./data/zim:/data/zim:ro
+    ports:
+      - "8080:8080"
+    restart: on-failure
+
+  mbtileserver:
+    image: ghcr.io/consbio/mbtileserver:latest
+    command: --port 8081 --dir /data/maps
+    volumes:
+      - ./data/maps:/data/maps:ro
+    ports:
+      - "8081:8081"
+    restart: on-failure
