@@ -226,7 +226,12 @@ async def _download_task(module: Module, settings: Settings) -> None:
                 sha.update(chunk)
         digest = f"sha256:{sha.hexdigest()}"
         if digest != module.checksum:
-            raise ValueError(f"Checksum mismatch: expected {module.checksum}, got {digest}")
+            _mismatch_path(module, settings).write_text(digest)
+            log.warning(
+                "Checksum mismatch for %s: expected %s, got %s",
+                module.id, module.checksum, digest,
+            )
+            return
 
         final = _final_path(module, settings)
         final.parent.mkdir(parents=True, exist_ok=True)
@@ -247,9 +252,6 @@ async def _download_task(module: Module, settings: Settings) -> None:
 
     except asyncio.CancelledError:
         raise
-    except ValueError:
-        part.unlink(missing_ok=True)
-        log.exception("Checksum failure for %s — clearing .part", module.id)
     except Exception:
         log.exception("Download failed for %s", module.id)
     finally:

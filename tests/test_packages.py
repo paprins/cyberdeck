@@ -199,6 +199,85 @@ async def test_start_download_raises_if_no_url(tmp_settings):
         await pkg_service.start_download(m, tmp_settings)
 
 
+async def test_download_writes_mismatch_file_on_checksum_failure(tmp_settings, monkeypatch):
+    m = _mod(checksum="sha256:expectedbutnotthis")
+    _seed(tmp_settings, [m])
+    tmp_settings.downloads_dir.mkdir(parents=True, exist_ok=True)
+
+    fake_bytes = b"fake file content"
+
+    class _Resp:
+        status_code = 200
+        def raise_for_status(self): pass
+        async def aiter_bytes(self, chunk_size):
+            yield fake_bytes
+
+    class _Stream:
+        async def __aenter__(self): return _Resp()
+        async def __aexit__(self, *a): pass
+
+    class _Client:
+        def __init__(self, **_): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        def stream(self, method, url, headers=None, timeout=None):
+            return _Stream()
+
+    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _Client)
+    monkeypatch.setattr(pkg_service, "_kiwix_add", lambda *a: None)
+    monkeypatch.setattr(pkg_service, "_signal_service", lambda *a: None)
+
+    await pkg_service.start_download(m, tmp_settings)
+    task = pkg_service._active_tasks["medical-wikimed"]
+    await task
+
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    mismatch = tmp_settings.downloads_dir / "medical-wikimed.mismatch"
+    assert part.exists(), ".part file must be kept on mismatch"
+    assert mismatch.exists(), ".mismatch file must be written"
+    import hashlib
+    expected_digest = "sha256:" + hashlib.sha256(fake_bytes).hexdigest()
+    assert mismatch.read_text().strip() == expected_digest
+
+
+async def test_download_does_not_write_mismatch_on_correct_checksum(tmp_settings, monkeypatch):
+    fake_bytes = b"correct content"
+    import hashlib
+    correct_checksum = "sha256:" + hashlib.sha256(fake_bytes).hexdigest()
+    m = _mod(checksum=correct_checksum)
+    _seed(tmp_settings, [m])
+    tmp_settings.downloads_dir.mkdir(parents=True, exist_ok=True)
+
+    class _Resp:
+        status_code = 200
+        def raise_for_status(self): pass
+        async def aiter_bytes(self, chunk_size):
+            yield fake_bytes
+
+    class _Stream:
+        async def __aenter__(self): return _Resp()
+        async def __aexit__(self, *a): pass
+
+    class _Client:
+        def __init__(self, **_): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        def stream(self, method, url, headers=None, timeout=None):
+            return _Stream()
+
+    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _Client)
+    monkeypatch.setattr(pkg_service, "_kiwix_add", lambda *a: None)
+    monkeypatch.setattr(pkg_service, "_signal_service", lambda *a: None)
+
+    await pkg_service.start_download(m, tmp_settings)
+    task = pkg_service._active_tasks.get("medical-wikimed")
+    if task:
+        await task
+
+    mismatch = tmp_settings.downloads_dir / "medical-wikimed.mismatch"
+    assert not mismatch.exists(), ".mismatch must not exist on successful download"
+
+
 # ── check_for_updates ─────────────────────────────────────────────────────────
 
 async def test_check_for_updates_merges_manifest(tmp_settings, monkeypatch):
