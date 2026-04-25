@@ -2,64 +2,134 @@
 
 @theme {
   /* ── Surfaces ── */
-  --color-bg:       oklch(8% 0.003 50);
-  --color-surface:  oklch(13% 0.005 50);
-  --color-elevated: oklch(19% 0.007 50);
-  --color-border:   oklch(27% 0.007 50);
+  --color-surface:                  #131313;
+  --color-surface-dim:              #131313;
+  --color-surface-container-lowest: #0e0e0e;
+  --color-surface-container-low:    #1b1b1b;
+  --color-surface-container:        #1f1f1f;
+  --color-surface-container-high:   #2a2a2a;
+  --color-surface-container-highest:#353535;
+  --color-surface-variant:          #353535;
+  --color-surface-bright:           #393939;
+  --color-background:               #131313;
 
-  /* ── Signal orange (operational accent) ── */
-  --color-amber:       oklch(63% 0.25 44);
-  --color-amber-mid:   oklch(48% 0.18 44);
-  --color-amber-ghost: oklch(20% 0.09 44);
+  /* ── Primary (orange) ── */
+  --color-primary:                  #ffb693;
+  --color-primary-container:        #ff6b00;
+  --color-on-primary:               #561f00;
+  --color-on-primary-container:     #572000;
+  --color-on-primary-fixed:         #351000;
+  --color-primary-fixed:            #ffdbcc;
+  --color-primary-fixed-dim:        #ffb693;
+
+  /* ── Secondary (purple) ── */
+  --color-secondary:                #d3beeb;
+  --color-secondary-container:      #524267;
+  --color-on-secondary:             #38294d;
+  --color-on-secondary-container:   #c4b0dd;
+  --color-secondary-fixed:          #eddcff;
+  --color-secondary-fixed-dim:      #d3beeb;
+  --color-on-secondary-fixed:       #231437;
+  --color-on-secondary-fixed-variant:#4f4065;
+
+  /* ── Tertiary (blue) ── */
+  --color-tertiary:                 #9ccaff;
+  --color-tertiary-container:       #059eff;
+  --color-on-tertiary:              #003257;
+  --color-on-tertiary-container:    #003357;
+  --color-tertiary-fixed:           #d0e4ff;
+  --color-tertiary-fixed-dim:       #9ccaff;
+  --color-on-tertiary-fixed:        #001d35;
+  --color-on-tertiary-fixed-variant:#00497b;
+
+  /* ── Outline ── */
+  --color-outline:                  #a98a7d;
+  --color-outline-variant:          #5a4136;
 
   /* ── Text ── */
-  --color-text-hi:  oklch(93% 0.004 50);
-  --color-text-mid: oklch(65% 0.005 50);
-  --color-text-lo:  oklch(50% 0.005 50);
+  --color-on-surface:               #e2e2e2;
+  --color-on-surface-variant:       #e2bfb0;
+  --color-on-background:            #e2e2e2;
 
-  /* ── Tile accents ── */
-  --color-tile-medical:      oklch(68% 0.25 25);
-  --color-tile-maps:         oklch(72% 0.22 145);
-  --color-tile-survival:     oklch(76% 0.18 58);
-  --color-tile-food:         oklch(74% 0.19 118);
-  --color-tile-encyclopedia: oklch(70% 0.18 232);
-  --color-tile-packages:     oklch(65% 0.14 195);
-  --color-tile-internet:     oklch(72% 0.20 260);
+  /* ── Inverse ── */
+  --color-inverse-surface:          #e2e2e2;
+  --color-inverse-on-surface:       #303030;
+  --color-inverse-primary:          #a04100;
+  --color-surface-tint:             #ffb693;
+
+  /* ── Error ── */
+  --color-error:                    #ffb4ab;
+  --color-error-container:          #93000a;
+  --color-on-error:                 #690005;
+  --color-on-error-container:       #ffdad6;
 
   /* ── Typography ── */
-  --font-display: 'B612', monospace;
-  --font-body:    'Atkinson Hyperlegible', sans-serif;
+  --font-headline: 'Space Grotesk', sans-serif;
+  --font-body:     'Inter', sans-serif;
+  --font-label:    'Space Grotesk', sans-serif;
 
-  /* ── Shape ── */
-  --radius-tile: 4px;
+  /* ── Shape: 0px everywhere, full stays round ── */
+  --radius:        0px;
+  --radius-sm:     0px;
+  --radius-md:     0px;
+  --radius-lg:     0px;
+  --radius-xl:     0px;
+  --radius-2xl:    0px;
+  --radius-3xl:    0px;
+  --radius-full:   9999px;
 }
 
 @layer base {
   @font-face {
-    font-family: 'B612';
-    src: url('/static/fonts/B612-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
+    font-family: 'Space Grotesk';
+    src: url('/static/fonts/space-grotesk-300.woff2') format('woff2');
+    font-weight: 300; font-style: normal; font-display: swap;
   }
   @font-face {
-    font-family: 'B612';
-    src: url('/static/fonts/B612-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
+    font-family: 'Space Grotesk';
+    src: url('/static/fonts/space-grotesk-400.woff2') format('woff2');
+    font-weight: 400; font-style: normal; font-display: swap;
   }
   @font-face {
-    font-family: 'Atkinson Hyperlegible';
-    src: url('/static/fonts/AtkinsonHyperlegible-Regular.woff2') format('woff2');
-    font-weight: 400;
-    font-style: normal;
+    font-family: 'Space Grotesk';
+    src: url('/static/fonts/space-grotesk-500.woff2') format('woff2');
+    font-weight: 500; font-style: normal; font-display: swap;
   }
   @font-face {
-    font-family: 'Atkinson Hyperlegible';
-    src: url('/static/fonts/AtkinsonHyperlegible-Bold.woff2') format('woff2');
-    font-weight: 700;
-    font-style: normal;
+    font-family: 'Space Grotesk';
+    src: url('/static/fonts/space-grotesk-600.woff2') format('woff2');
+    font-weight: 600; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Space Grotesk';
+    src: url('/static/fonts/space-grotesk-700.woff2') format('woff2');
+    font-weight: 700; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Inter';
+    src: url('/static/fonts/inter-400.woff2') format('woff2');
+    font-weight: 400; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Inter';
+    src: url('/static/fonts/inter-500.woff2') format('woff2');
+    font-weight: 500; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Inter';
+    src: url('/static/fonts/inter-600.woff2') format('woff2');
+    font-weight: 600; font-style: normal; font-display: swap;
+  }
+  @font-face {
+    font-family: 'Inter';
+    src: url('/static/fonts/inter-700.woff2') format('woff2');
+    font-weight: 700; font-style: normal; font-display: swap;
   }
 
-  /* Hide Alpine.js x-cloak elements until initialized */
   [x-cloak] { display: none !important; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar       { width: 4px; }
+  ::-webkit-scrollbar-track { background: #0e0e0e; }
+  ::-webkit-scrollbar-thumb { background: #ff6b00; }
 }
