@@ -133,3 +133,39 @@ def test_write_brightness_clamps_above_100(tmp_path):
 
 def test_write_brightness_noop_when_no_device(tmp_path):
     sys_svc.write_brightness(50, _root=tmp_path)  # must not raise
+
+
+# ── GET /api/system/brightness ────────────────────────────────────────────────
+
+async def test_get_brightness_returns_pct(client, monkeypatch):
+    monkeypatch.setattr(sys_svc, "read_brightness", lambda: 80)
+    r = await client.get("/api/system/brightness")
+    assert r.status_code == 200
+    assert r.json() == {"brightness_pct": 80}
+
+
+async def test_get_brightness_returns_null_when_no_device(client, monkeypatch):
+    monkeypatch.setattr(sys_svc, "read_brightness", lambda: None)
+    r = await client.get("/api/system/brightness")
+    assert r.status_code == 200
+    assert r.json() == {"brightness_pct": None}
+
+
+# ── POST /api/system/brightness ───────────────────────────────────────────────
+
+async def test_post_brightness_returns_204(client, monkeypatch):
+    calls = []
+    monkeypatch.setattr(sys_svc, "write_brightness", lambda pct: calls.append(pct))
+    r = await client.post("/api/system/brightness", json={"level": 50})
+    assert r.status_code == 204
+    assert calls == [50]
+
+
+async def test_post_brightness_rejects_out_of_range(client):
+    r = await client.post("/api/system/brightness", json={"level": 150})
+    assert r.status_code == 422
+
+
+async def test_post_brightness_rejects_negative(client):
+    r = await client.post("/api/system/brightness", json={"level": -1})
+    assert r.status_code == 422
