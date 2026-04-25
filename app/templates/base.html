@@ -5,10 +5,11 @@
   <meta name="viewport" content="width=1280, initial-scale=1">
   <title>Cyberdeck</title>
   <link rel="stylesheet" href="/static/css/app.css">
+  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
   <script defer src="/static/js/alpine.min.js"></script>
 </head>
 <body
-  class="bg-bg text-text-hi font-display h-full overflow-hidden flex flex-col"
+  class="bg-[#131313] text-on-surface font-body h-full overflow-hidden flex flex-col"
   x-data="{
     battery_pct: {{ battery_pct | tojson }},
     wifi_connected: {{ wifi_connected | tojson }},
@@ -63,51 +64,109 @@
   @keydown.ctrl.k.window.prevent="document.getElementById('search') && document.getElementById('search').focus()"
 >
 
-  <!-- ── Topbar ── -->
-  <header class="flex-shrink-0 flex items-center px-5 gap-5"
-          style="height:48px; border-bottom: 1px solid var(--color-border); background: var(--color-bg);">
+  <!-- ── Header ── -->
+  <header class="bg-[#131313] w-full z-50 flex justify-between items-center px-6 flex-shrink-0"
+          style="height:64px; border-bottom: 1px solid rgba(90,65,54,0.15);">
 
-    <!-- Brand -->
-    <a href="/" class="flex flex-col justify-center flex-shrink-0">
-      <div class="font-display font-bold text-[13px] tracking-[0.18em] text-amber uppercase leading-none">⬡ CYBERDECK</div>
-      <div class="font-display text-[9px] tracking-[0.14em] text-text-lo uppercase mt-[4px]">SURVIVAL_DASHBOARD</div>
-    </a>
+    <!-- Left: brand + search -->
+    <div class="flex items-center gap-6">
+      <!-- Logo -->
+      <div class="w-10 h-10 bg-primary-container flex items-center justify-center flex-shrink-0">
+        <span class="material-symbols-outlined text-on-primary-container text-2xl" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">radar</span>
+      </div>
 
-    <!-- Spacer -->
-    <div class="flex-1"></div>
-
-    <!-- System status -->
-    <div class="flex items-center gap-4 flex-shrink-0">
-
-      <!-- Battery -->
-      <div class="flex items-center gap-[8px]">
-        <span class="font-display text-[9px] tracking-[0.10em] text-text-lo uppercase">BATT</span>
-        <div class="w-[56px] h-[3px] bg-elevated rounded-full overflow-hidden">
-          <div class="h-full bg-amber rounded-full"
-               :style="`width: ${battery_pct ?? 0}%`"
-               style="width: {{ battery_pct or 0 }}%"></div>
+      <!-- Wordmark -->
+      <div class="flex flex-col">
+        <div class="text-xl font-bold text-primary-container tracking-tighter font-headline uppercase leading-none">
+          SURVIVAL_DASHBOARD
         </div>
-        <span class="font-display text-[11px] font-bold text-text-hi tabular-nums"
-              x-text="battery_pct !== null ? battery_pct + '%' : '—'">{{ (battery_pct ~ '%') if battery_pct is not none else '—' }}</span>
+        <div class="text-[8px] font-label tracking-[0.3em] uppercase mt-1 leading-none"
+             style="color: rgba(255,182,147,0.6);">
+          SECURE_ACCESS // SECTOR_G14
+        </div>
       </div>
 
-      <!-- Divider -->
-      <div class="h-4 w-px bg-border"></div>
+      <!-- Search -->
+      <div class="hidden xl:flex items-center bg-surface-container-lowest px-4 py-1.5 gap-3 ml-4 relative"
+           style="border: 1px solid rgba(90,65,54,0.2);"
+           x-data="{
+             searchQuery: '',
+             searchResults: [],
+             searchOpen: false,
+             async search() {
+               if (this.searchQuery.length < 2) { this.searchResults = []; this.searchOpen = false; return; }
+               try {
+                 const r = await fetch('/api/search?q=' + encodeURIComponent(this.searchQuery));
+                 this.searchResults = await r.json();
+                 this.searchOpen = this.searchResults.length > 0;
+               } catch(e) { this.searchResults = []; }
+             }
+           }"
+      >
+        <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">search</span>
+        <input
+          id="search"
+          type="text"
+          x-model="searchQuery"
+          @input.debounce.300ms="search()"
+          @keydown.escape="searchResults = []; searchOpen = false"
+          placeholder="QUERY_DATABASE..."
+          class="bg-transparent border-none focus:ring-0 text-[10px] font-label uppercase tracking-wider w-48 text-on-surface placeholder:opacity-30 outline-none"
+          autocomplete="off"
+        >
+        <!-- Search results dropdown -->
+        <div x-show="searchOpen && searchResults.length > 0" x-cloak
+             class="absolute top-full left-0 mt-1 bg-surface-container border border-outline-variant/30 overflow-hidden z-50 w-80">
+          <template x-for="result in searchResults" :key="result.title + result.module">
+            <a :href="result.url"
+               class="flex items-center gap-3 px-4 py-3 border-b border-outline-variant/20 last:border-b-0 hover:bg-surface-container-high"
+               @click="searchOpen = false; searchQuery = ''">
+              <span class="text-on-surface-variant text-[10px] tracking-[0.08em] uppercase font-label min-w-[80px]" x-text="result.module"></span>
+              <span class="text-on-surface text-[13px] font-body truncate" x-text="result.title"></span>
+            </a>
+          </template>
+        </div>
+      </div>
+    </div>
 
-      <!-- Signal -->
-      <div class="flex items-center gap-[8px]">
-        <span class="font-display text-[9px] tracking-[0.10em] text-text-lo uppercase">SIG</span>
-        <span class="font-display text-[10px] tracking-[0.10em] font-bold"
-              :class="wifi_connected ? 'text-tile-maps' : 'text-amber'"
-              x-text="wifi_connected ? 'ONLINE' : 'OFFLINE'">{{ 'ONLINE' if wifi_connected else 'OFFLINE' }}</span>
+    <!-- Right: status + shutdown -->
+    <div class="flex items-center gap-6">
+
+      <!-- Language dropdown -->
+      <div class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 cursor-pointer"
+           style="border: 1px solid rgba(90,65,54,0.3);">
+        <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">language</span>
+        <span class="text-xs font-label uppercase font-bold">ENG_US</span>
+        <span class="material-symbols-outlined text-xs" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">expand_more</span>
       </div>
 
+      <!-- System icons -->
+      <div class="flex items-center gap-4 text-on-surface/70">
+        <span class="material-symbols-outlined cursor-pointer hover:text-primary"
+              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
+              title="Settings">settings</span>
+        <span class="material-symbols-outlined cursor-pointer hover:text-primary"
+              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
+              :title="'Battery: ' + (battery_pct ?? '?') + '%'">battery_charging_full</span>
+        <span class="material-symbols-outlined cursor-pointer"
+              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
+              :class="wifi_connected ? 'text-tertiary' : 'text-error'"
+              :title="wifi_connected ? 'Online' : 'Offline'">signal_cellular_connected_no_internet_4_bar</span>
+
+        <div class="h-6 w-px bg-outline-variant/20 mx-2"></div>
+
+        <!-- Shutdown -->
+        <button class="flex items-center gap-2 text-error px-3 py-1.5 font-label text-xs tracking-widest uppercase"
+                style="border: 1px solid rgba(255,180,171,0.2);">
+          <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">power_settings_new</span>
+          SHUTDOWN
+        </button>
+      </div>
     </div>
   </header>
 
   <!-- ── Main content ── -->
-  <div class="flex-1 flex flex-col overflow-hidden"
-       style="background-image: radial-gradient(circle, oklch(19% 0.007 50) 1px, transparent 1px); background-size: 28px 28px;">
+  <div class="flex-1 flex flex-col overflow-hidden">
     {% block content %}{% endblock %}
   </div>
 
