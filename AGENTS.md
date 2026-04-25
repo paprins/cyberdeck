@@ -29,7 +29,7 @@ uv run pytest tests/test_registry.py
 uv run pytest -k "test_merge_remote_manifest"
 
 # Run the dev server
-uv run uvicorn app.main:app --reload --port 8000
+CYBERDECK_DATA_DIR=data uv run uvicorn app.main:app --reload --port 8000
 ```
 
 All environment variables use the `CYBERDECK_` prefix (e.g. `CYBERDECK_DATA_DIR=/data`).
