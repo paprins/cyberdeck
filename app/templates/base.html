@@ -9,7 +9,7 @@
   <script defer src="/static/js/alpine.min.js"></script>
 </head>
 <body
-  class="bg-[#131313] text-on-surface font-body h-full overflow-hidden flex flex-col"
+  class="bg-surface text-on-surface font-body h-full overflow-hidden flex flex-col"
   x-data="{
     battery_pct: {{ battery_pct | tojson }},
     wifi_connected: {{ wifi_connected | tojson }},
@@ -65,8 +65,8 @@
 >
 
   <!-- ── Header ── -->
-  <header class="bg-[#131313] w-full z-50 flex justify-between items-center px-6 flex-shrink-0"
-          style="height:64px; border-bottom: 1px solid rgba(90,65,54,0.15);">
+  <header class="bg-surface w-full z-50 flex justify-between items-center px-6 flex-shrink-0 border-b border-outline-variant/15"
+          style="height:64px;">
 
     <!-- Left: brand + search -->
     <div class="flex items-center gap-6">
@@ -80,15 +80,13 @@
         <div class="text-xl font-bold text-primary-container tracking-tighter font-headline uppercase leading-none">
           SURVIVAL_DASHBOARD
         </div>
-        <div class="text-[8px] font-label tracking-[0.3em] uppercase mt-1 leading-none"
-             style="color: rgba(255,182,147,0.6);">
+        <div class="text-[8px] font-label tracking-[0.3em] uppercase mt-1 leading-none text-primary/60">
           SECURE_ACCESS // SECTOR_G14
         </div>
       </div>
 
       <!-- Search -->
-      <div class="hidden xl:flex items-center bg-surface-container-lowest px-4 py-1.5 gap-3 ml-4 relative"
-           style="border: 1px solid rgba(90,65,54,0.2);"
+      <div class="hidden xl:flex items-center bg-surface-container-lowest px-4 py-1.5 gap-3 ml-4 relative border border-outline-variant/20"
            x-data="{
              searchQuery: '',
              searchResults: [],
@@ -133,8 +131,7 @@
     <div class="flex items-center gap-6">
 
       <!-- Language dropdown -->
-      <div class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 cursor-pointer"
-           style="border: 1px solid rgba(90,65,54,0.3);">
+      <div class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 cursor-pointer border border-outline-variant/30">
         <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">language</span>
         <span class="text-xs font-label uppercase font-bold">ENG_US</span>
         <span class="material-symbols-outlined text-xs" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">expand_more</span>
@@ -156,8 +153,7 @@
         <div class="h-6 w-px bg-outline-variant/20 mx-2"></div>
 
         <!-- Shutdown -->
-        <button class="flex items-center gap-2 text-error px-3 py-1.5 font-label text-xs tracking-widest uppercase"
-                style="border: 1px solid rgba(255,180,171,0.2);">
+        <button class="flex items-center gap-2 text-error px-3 py-1.5 font-label text-xs tracking-widest uppercase border border-error/20">
           <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">power_settings_new</span>
           SHUTDOWN
         </button>
