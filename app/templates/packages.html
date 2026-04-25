@@ -101,6 +101,8 @@
       pct: {{ s.pct }},
       bytes_dl: {{ s.bytes_downloaded }},
       total: {{ s.total_bytes }},
+      actual_checksum: '{{ s.actual_checksum | default("") }}',
+      expected_checksum: '{{ s.expected_checksum | default("") }}',
       _poll: null,
       init() {
         if (this.status === 'downloading')
@@ -142,6 +144,14 @@
            x-text="'⚠ INTERRUPTED · ' + (bytes_dl/1e9).toFixed(1) + ' GB of ' + (total/1e9).toFixed(1) + ' GB'"></div>
     </div>
 
+    <!-- Checksum mismatch -->
+    <div class="flex-1 min-w-0" x-show="status === 'checksum_mismatch'" x-cloak>
+      <div class="font-headline font-bold text-[12px] text-error truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
+      <div class="font-body text-[10px] text-error font-bold mt-[2px]">⚠ CHECKSUM_MISMATCH</div>
+      <div class="font-body text-[9px] text-error/60 mt-[2px]" x-text="'EXP: ' + expected_checksum.slice(0, 24) + '…'"></div>
+      <div class="font-body text-[9px] text-error/60" x-text="'GOT: ' + actual_checksum.slice(0, 24) + '…'"></div>
+    </div>
+
     <!-- Installed -->
     <div class="flex-1 min-w-0" x-show="status === 'installed' || status === 'not_installed'" x-cloak>
       <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
@@ -166,6 +176,18 @@
           <button @click="$dispatch('confirm-delete', {id: '{{ m.id }}', name: '{{ m.display_name }}'})"
                   class="font-headline text-[10px] font-bold px-2 py-[4px] border text-error border-error/40">
             REMOVE
+          </button>
+        </div>
+      </template>
+      <template x-if="status === 'checksum_mismatch'">
+        <div class="flex gap-[6px]">
+          <button @click="act('/api/packages/{{ m.id }}/accept-checksum')"
+                  class="font-headline text-[10px] font-bold px-2 py-[4px] border text-primary border-primary/40">
+            ACCEPT
+          </button>
+          <button @click="act('/api/packages/{{ m.id }}/discard-checksum')"
+                  class="font-headline text-[10px] font-bold px-2 py-[4px] border text-error border-error/40">
+            DISCARD
           </button>
         </div>
       </template>
