@@ -8,7 +8,7 @@
   <script defer src="/static/js/alpine.min.js"></script>
 </head>
 <body
-  class="bg-bg text-text-hi font-display h-full overflow-hidden flex"
+  class="bg-bg text-text-hi font-display h-full overflow-hidden flex flex-col"
   x-data="{
     battery_pct: {{ battery_pct | tojson }},
     wifi_connected: {{ wifi_connected | tojson }},
@@ -63,63 +63,47 @@
   @keydown.ctrl.k.window.prevent="document.getElementById('search') && document.getElementById('search').focus()"
 >
 
-  <!-- ── Sidebar ── -->
-  <aside class="w-[200px] flex-shrink-0 flex flex-col overflow-hidden"
-         style="background: var(--color-bg); border-right: 1px solid var(--color-border);">
+  <!-- ── Topbar ── -->
+  <header class="flex-shrink-0 flex items-center px-5 gap-5"
+          style="height:48px; border-bottom: 1px solid var(--color-border); background: var(--color-bg);">
 
     <!-- Brand -->
-    <div class="px-5 pt-6 pb-5 flex-shrink-0">
-      <div class="font-display font-bold text-[13px] tracking-[0.18em] text-amber uppercase">⬡ CYBERDECK</div>
-      <div class="font-display text-[9px] tracking-[0.14em] text-text-lo uppercase mt-[5px]">NODE_01</div>
-    </div>
-
-    <div class="mx-4 h-px bg-border flex-shrink-0"></div>
-
-    <!-- Nav -->
-    <nav class="px-3 py-3 flex flex-col gap-[3px] flex-shrink-0">
-      <a href="/"
-         class="px-3 py-[11px] font-display text-[11px] tracking-[0.12em] uppercase rounded-tile block
-                {% if request.url.path == '/' %}bg-amber text-bg font-bold{% else %}text-text-mid hover:text-text-hi hover:bg-elevated{% endif %}">
-        LIBRARY
-      </a>
-      <a href="/packages"
-         class="px-3 py-[11px] font-display text-[11px] tracking-[0.12em] uppercase rounded-tile block
-                {% if request.url.path == '/packages' %}bg-amber text-bg font-bold{% else %}text-text-mid hover:text-text-hi hover:bg-elevated{% endif %}">
-        PACKAGES
-      </a>
-    </nav>
+    <a href="/" class="flex flex-col justify-center flex-shrink-0">
+      <div class="font-display font-bold text-[13px] tracking-[0.18em] text-amber uppercase leading-none">⬡ CYBERDECK</div>
+      <div class="font-display text-[9px] tracking-[0.14em] text-text-lo uppercase mt-[4px]">SURVIVAL_DASHBOARD</div>
+    </a>
 
     <!-- Spacer -->
     <div class="flex-1"></div>
 
     <!-- System status -->
-    <div class="flex-shrink-0 mx-4 mb-5 pt-4 flex flex-col gap-[10px]"
-         style="border-top: 1px solid var(--color-border);">
+    <div class="flex items-center gap-4 flex-shrink-0">
 
       <!-- Battery -->
-      <div>
-        <div class="flex items-center justify-between mb-[5px]">
-          <span class="font-display text-[9px] tracking-[0.10em] text-text-lo uppercase">Battery</span>
-          <span class="font-display text-[11px] font-bold text-text-hi"
-                x-text="battery_pct !== null ? battery_pct + '%' : '—'">{{ (battery_pct ~ '%') if battery_pct is not none else '—' }}</span>
-        </div>
-        <div class="h-[3px] bg-elevated rounded-full overflow-hidden">
+      <div class="flex items-center gap-[8px]">
+        <span class="font-display text-[9px] tracking-[0.10em] text-text-lo uppercase">BATT</span>
+        <div class="w-[56px] h-[3px] bg-elevated rounded-full overflow-hidden">
           <div class="h-full bg-amber rounded-full"
                :style="`width: ${battery_pct ?? 0}%`"
                style="width: {{ battery_pct or 0 }}%"></div>
         </div>
+        <span class="font-display text-[11px] font-bold text-text-hi tabular-nums"
+              x-text="battery_pct !== null ? battery_pct + '%' : '—'">{{ (battery_pct ~ '%') if battery_pct is not none else '—' }}</span>
       </div>
 
+      <!-- Divider -->
+      <div class="h-4 w-px bg-border"></div>
+
       <!-- Signal -->
-      <div class="flex items-center justify-between">
-        <span class="font-display text-[9px] tracking-[0.10em] text-text-lo uppercase">Signal</span>
+      <div class="flex items-center gap-[8px]">
+        <span class="font-display text-[9px] tracking-[0.10em] text-text-lo uppercase">SIG</span>
         <span class="font-display text-[10px] tracking-[0.10em] font-bold"
               :class="wifi_connected ? 'text-tile-maps' : 'text-amber'"
               x-text="wifi_connected ? 'ONLINE' : 'OFFLINE'">{{ 'ONLINE' if wifi_connected else 'OFFLINE' }}</span>
       </div>
 
     </div>
-  </aside>
+  </header>
 
   <!-- ── Main content ── -->
   <div class="flex-1 flex flex-col overflow-hidden"

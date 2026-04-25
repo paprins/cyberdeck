@@ -31,7 +31,13 @@ async def test_home_returns_html(client):
 
 async def test_home_renders_wordmark(client):
     r = await client.get("/")
-    assert "CYBERDECK" in r.text
+    assert "SURVIVAL_DASHBOARD" in r.text
+
+
+async def test_home_import_module_card_always_present(client):
+    r = await client.get("/")
+    assert "IMPORT_MODULE" in r.text
+    assert 'href="/packages"' in r.text
 
 
 async def test_home_shows_active_module_name(client, tmp_settings):
@@ -39,29 +45,34 @@ async def test_home_shows_active_module_name(client, tmp_settings):
         update_server="https://example.com/manifest.json",
         modules=[
             Module(
-                id="maps-world", display_name="Maps", category="maps",
-                description="OpenStreetMap offline", latest_version="2024-01",
-                size_gb=10, checksum="sha256:abc", active=True,
+                id="medical-wikimed", display_name="Medical Wiki", category="medical",
+                description="Emergency medicine reference", latest_version="2024-01",
+                size_gb=0.8, checksum="sha256:abc", active=True,
             )
         ],
     )
     save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert "Maps" in r.text
+    assert "Medical Wiki" in r.text or "MEDICAL_WIKI" in r.text
 
 
-async def test_home_shows_empty_state_when_no_active_modules(client):
+async def test_home_shows_module_size(client, tmp_settings):
+    reg = Registry(
+        update_server="https://example.com/manifest.json",
+        modules=[
+            Module(
+                id="medical-wikimed", display_name="Medical Wiki", category="medical",
+                description="Emergency medicine reference", latest_version="2024-01",
+                size_gb=3.2, checksum="sha256:abc", active=True,
+            )
+        ],
+    )
+    save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert "NO_MODULES_ACTIVE" in r.text
+    assert "3.2" in r.text
 
 
-async def test_home_packages_tile_always_rendered(client):
-    r = await client.get("/")
-    assert "Packages" in r.text
-
-
-
-async def test_maps_tile_has_mbtiles_url(client, tmp_settings):
+async def test_home_maps_module_has_mbtiles_url(client, tmp_settings):
     reg = Registry(
         update_server="https://example.com/manifest.json",
         modules=[
@@ -77,7 +88,7 @@ async def test_maps_tile_has_mbtiles_url(client, tmp_settings):
     assert 'href="http://localhost:8081/' in r.text
 
 
-async def test_medical_tile_has_kiwix_url(client, tmp_settings):
+async def test_home_medical_module_has_kiwix_url(client, tmp_settings):
     reg = Registry(
         update_server="https://example.com/manifest.json",
         modules=[
@@ -93,30 +104,17 @@ async def test_medical_tile_has_kiwix_url(client, tmp_settings):
     assert 'href="http://localhost:8080/medical-wikimed/' in r.text
 
 
-async def test_packages_tile_has_packages_url(client):
+async def test_home_inactive_modules_not_shown(client, tmp_settings):
+    reg = Registry(
+        update_server="https://example.com/manifest.json",
+        modules=[
+            Module(
+                id="medical-wikimed", display_name="Secret Module", category="medical",
+                description="Should not appear", latest_version="2024-01",
+                size_gb=0.8, checksum="sha256:abc", active=False,
+            )
+        ],
+    )
+    save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert 'href="/packages"' in r.text
-
-
-async def test_empty_state_cta_links_to_packages(client):
-    r = await client.get("/")
-    assert "NO_MODULES_ACTIVE" in r.text
-    # The CTA text should be a link, not just plain text
-    assert '<a href="/packages"' in r.text
-    assert 'OPEN_PACKAGES' in r.text
-
-
-async def test_chrome_has_no_modules_label(client):
-    r = await client.get("/")
-    assert "Modules" not in r.text
-
-
-async def test_chrome_wifi_no_text(client):
-    r = await client.get("/")
-    assert ">connected<" not in r.text
-    assert ">offline<" not in r.text
-
-
-async def test_chrome_has_no_updates_badge(client):
-    r = await client.get("/")
-    assert "bg-tile-survival" not in r.text
+    assert "Secret Module" not in r.text
