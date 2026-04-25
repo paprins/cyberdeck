@@ -528,6 +528,62 @@ async def test_uninstall_endpoint_returns_404_for_unknown(client, tmp_settings):
     assert r.status_code == 404
 
 
+async def test_accept_checksum_endpoint_returns_204(client, tmp_settings, monkeypatch):
+    # Set up real mismatch state — endpoint calls the actual service function
+    m = _mod()
+    _seed(tmp_settings, [m])
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    mismatch_file = tmp_settings.downloads_dir / "medical-wikimed.mismatch"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"content")
+    mismatch_file.write_text("sha256:actual")
+    monkeypatch.setattr(pkg_service, "_kiwix_add", lambda *a: None)
+    monkeypatch.setattr(pkg_service, "_signal_service", lambda *a: None)
+    r = await client.post("/api/packages/medical-wikimed/accept-checksum")
+    assert r.status_code == 204
+
+
+async def test_accept_checksum_endpoint_returns_404_for_unknown(client, tmp_settings):
+    _seed(tmp_settings)
+    r = await client.post("/api/packages/nonexistent/accept-checksum")
+    assert r.status_code == 404
+
+
+async def test_accept_checksum_endpoint_returns_409_when_no_mismatch_pending(client, tmp_settings):
+    # No .part or .mismatch files — service raises RuntimeError → 409
+    m = _mod()
+    _seed(tmp_settings, [m])
+    r = await client.post("/api/packages/medical-wikimed/accept-checksum")
+    assert r.status_code == 409
+
+
+async def test_discard_checksum_endpoint_returns_204(client, tmp_settings):
+    # discard works even with no files present (missing_ok=True)
+    m = _mod()
+    _seed(tmp_settings, [m])
+    r = await client.post("/api/packages/medical-wikimed/discard-checksum")
+    assert r.status_code == 204
+
+
+async def test_discard_checksum_endpoint_returns_404_for_unknown(client, tmp_settings):
+    _seed(tmp_settings)
+    r = await client.post("/api/packages/nonexistent/discard-checksum")
+    assert r.status_code == 404
+
+
+async def test_packages_page_shows_mismatch_module_in_installed_section(client, tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    mismatch_file = tmp_settings.downloads_dir / "medical-wikimed.mismatch"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"content")
+    mismatch_file.write_text("sha256:actualhash")
+    r = await client.get("/packages")
+    assert r.status_code == 200
+    assert "checksum_mismatch" in r.text
+
+
 # ── POST /api/packages/{id}/activate ─────────────────────────────────────────
 
 async def test_activate_endpoint_returns_204(client, tmp_settings, monkeypatch):

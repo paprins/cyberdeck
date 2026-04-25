@@ -8,10 +8,12 @@ import httpx
 from app.config import Settings
 from app.services.packages import (
     _active_tasks,
+    accept_checksum_mismatch,
     activate_module,
     cancel_download,
     check_for_updates,
     deactivate_module,
+    discard_checksum_mismatch,
     get_download_status,
     get_storage_info,
     start_download,
@@ -38,7 +40,7 @@ def make_router(cfg: Settings) -> APIRouter:
         installed = [
             m for m in registry.modules
             if (m.is_installed and not m.has_update)
-            or (not m.is_installed and all_statuses[m.id]["status"] in ("downloading", "interrupted"))
+            or (not m.is_installed and all_statuses[m.id]["status"] in ("downloading", "interrupted", "checksum_mismatch"))
         ]
         available = [
             m for m in registry.modules
@@ -55,6 +57,7 @@ def make_router(cfg: Settings) -> APIRouter:
             "storage": storage,
             "has_active_download": bool(_active_tasks),
             "battery_pct": status.battery_pct,
+            "battery_charging": status.battery_charging,
             "wifi_connected": status.wifi_connected,
         })
 
@@ -129,6 +132,27 @@ def make_router(cfg: Settings) -> APIRouter:
         if module is None:
             return JSONResponse({"error": "not found"}, status_code=404)
         await deactivate_module(module, cfg)
+        return Response(status_code=204)
+
+    @router.post("/api/packages/{module_id}/accept-checksum")
+    async def accept_checksum(module_id: str):
+        registry = load_registry(cfg)
+        module = next((m for m in registry.modules if m.id == module_id), None)
+        if module is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        try:
+            await accept_checksum_mismatch(module, cfg)
+        except RuntimeError as e:
+            return JSONResponse({"error": str(e)}, status_code=409)
+        return Response(status_code=204)
+
+    @router.post("/api/packages/{module_id}/discard-checksum")
+    async def discard_checksum(module_id: str):
+        registry = load_registry(cfg)
+        module = next((m for m in registry.modules if m.id == module_id), None)
+        if module is None:
+            return JSONResponse({"error": "not found"}, status_code=404)
+        await discard_checksum_mismatch(module, cfg)
         return Response(status_code=204)
 
     return router
