@@ -102,5 +102,5 @@ def write_brightness(pct: int, _root: Path = _BACKLIGHT_ROOT) -> None:
             raw = round(pct * max_raw / 100)
             (max_path.parent / "brightness").write_text(str(raw))
             return
-        except OSError:
+        except (OSError, ValueError):
             pass
