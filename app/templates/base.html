@@ -12,6 +12,9 @@
   x-data="{
     battery_pct: {{ battery_pct | tojson }},
     wifi_connected: {{ wifi_connected | tojson }},
+    lastActivity: Date.now(),
+    dimmed: false,
+    restorePct: null,
     async poll() {
       try {
         const r = await fetch('/api/system');
@@ -19,9 +22,44 @@
         this.battery_pct = d.battery_pct;
         this.wifi_connected = d.wifi_connected;
       } catch(e) {}
+    },
+    async initBrightness() {
+      try {
+        const r = await fetch('/api/system/brightness');
+        const d = await r.json();
+        this.restorePct = d.brightness_pct;
+      } catch(e) {}
+    },
+    async _setBrightness(pct) {
+      try {
+        await fetch('/api/system/brightness', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({level: pct})
+        });
+      } catch(e) {}
+    },
+    _onActivity() {
+      this.lastActivity = Date.now();
+      if (this.dimmed) {
+        this.dimmed = false;
+        this._setBrightness(this.restorePct ?? 100);
+      }
     }
   }"
-  x-init="setInterval(() => poll(), 10000)"
+  x-init="
+    initBrightness();
+    setInterval(() => poll(), 10000);
+    setInterval(() => {
+      if (!dimmed && Date.now() - lastActivity > 120000) {
+        dimmed = true;
+        _setBrightness(10);
+      }
+    }, 30000);
+    ['mousemove', 'keydown', 'click', 'touchstart'].forEach(e =>
+      window.addEventListener(e, () => _onActivity(), {passive: true})
+    );
+  "
   @keydown.ctrl.k.window.prevent="document.getElementById('search') && document.getElementById('search').focus()"
 >
 
