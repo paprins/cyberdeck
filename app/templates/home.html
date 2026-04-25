@@ -1,12 +1,100 @@
 {% extends "base.html" %}
+
 {% block content %}
-<main>
-  {% for card in cards %}
-  <a href="{{ card.url }}">
-    <span>{{ card.module.display_name }}</span>
-    <span>{{ card.module.size_gb }}_GB</span>
-  </a>
-  {% endfor %}
-  <a href="/packages">IMPORT_MODULE</a>
+<main class="flex-1 overflow-hidden flex flex-col p-8">
+
+  {#-- Category metadata: icon, badge, image --#}
+  {%- set META = {
+    'medical':    {'icon': 'medication',   'badge': 'CRITICAL', 'badge_bg': 'bg-error-container',        'badge_text': 'text-on-error-container'},
+    'food':       {'icon': 'inventory',    'badge': 'RESOURCE', 'badge_bg': 'bg-secondary-container',    'badge_text': 'text-on-secondary-container'},
+    'energy':     {'icon': 'bolt',         'badge': 'GRID_OFF', 'badge_bg': 'bg-tertiary-container',     'badge_text': 'text-on-tertiary'},
+    'mechanic':   {'icon': 'build',        'badge': None,       'badge_bg': '',                          'badge_text': ''},
+    'gardening':  {'icon': 'potted_plant', 'badge': None,       'badge_bg': '',                          'badge_text': ''},
+    'shelter':    {'icon': 'foundation',   'badge': None,       'badge_bg': '',                          'badge_text': ''},
+    'animal_care':{'icon': 'pets',         'badge': None,       'badge_bg': '',                          'badge_text': ''},
+  } -%}
+
+  {#-- Card grid --#}
+  <div class="flex-1 grid grid-cols-4 grid-rows-2 gap-4">
+
+    {% for card in cards %}
+    {%- set cat = card.module.category -%}
+    {%- set meta = META.get(cat, {'icon': 'folder', 'badge': None, 'badge_bg': '', 'badge_text': ''}) -%}
+    <a href="{{ card.url }}"
+       class="bg-surface-container flex flex-col cursor-pointer group border-b-2 border-transparent hover:bg-surface-container-high hover:border-primary">
+      {#-- Image --#}
+      <div class="flex-1 relative overflow-hidden" style="max-height: 50%;">
+        <img src="/static/images/categories/{{ cat }}.png"
+             alt="{{ card.module.display_name }}"
+             class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0"
+             style="transition: none;">
+        {% if meta.badge %}
+        <div class="absolute top-2 right-2 {{ meta.badge_bg }} {{ meta.badge_text }} px-2 py-1 text-[10px] font-bold font-label uppercase">
+          {{ meta.badge }}
+        </div>
+        {% endif %}
+      </div>
+      {#-- Info --#}
+      <div class="p-4 flex flex-col" style="min-height: 50%;">
+        <div class="flex justify-between items-start mb-2">
+          <h4 class="font-headline font-bold text-lg uppercase tracking-tight text-on-surface group-hover:text-primary leading-tight">
+            {{ card.module.display_name | replace(' ', '_') }}
+          </h4>
+          <span class="material-symbols-outlined text-on-secondary-container text-xl"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">{{ meta.icon }}</span>
+        </div>
+        <p class="text-[11px] text-on-surface/60 font-body mb-4 leading-snug flex-1">
+          {{ card.module.description }}
+        </p>
+        <div class="flex justify-between items-center mt-auto">
+          <span class="text-[9px] font-label text-on-surface/40 uppercase">{{ card.module.size_gb }}_GB</span>
+          <span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+
+    {#-- IMPORT_MODULE card (always last) --#}
+    <a href="/packages"
+       class="bg-surface-container-lowest flex flex-col items-center justify-center p-4 group hover:border-primary cursor-pointer border border-dashed border-outline-variant/30">
+      <span class="material-symbols-outlined text-4xl text-on-surface/20 group-hover:text-primary mb-2"
+            style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">add_box</span>
+      <span class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/40 group-hover:text-primary font-bold">
+        IMPORT_MODULE
+      </span>
+    </a>
+
+  </div>
+
+  {#-- System log footer --#}
+  <div class="mt-6 bg-surface-container-lowest p-4 font-label text-[10px] flex-shrink-0 border border-outline-variant/10">
+    <div class="flex justify-between text-primary/40 mb-3 font-bold uppercase tracking-[0.2em]">
+      <span>CORE_PROCESS_LOG</span>
+      <span>TIME_UTC: <span x-text="new Date().toUTCString().split(' ')[4]">00:00:00</span></span>
+    </div>
+    <div class="space-y-1 opacity-70">
+      <div class="flex gap-4">
+        <span class="text-primary">[OK]</span>
+        <span class="text-on-surface/40" x-text="new Date(Date.now()-4000).toUTCString().split(' ')[4]">--:--:--</span>
+        <span>MD5_CHECKSUM_VERIFIED: CYBERDECK_V1.DB</span>
+      </div>
+      <div class="flex gap-4">
+        <span class="text-primary">[OK]</span>
+        <span class="text-on-surface/40" x-text="new Date(Date.now()-6000).toUTCString().split(' ')[4]">--:--:--</span>
+        <span>ENCRYPTION_LAYER_RE-LOCKED: SECTOR_G14</span>
+      </div>
+      <div class="flex gap-4">
+        <span class="text-tertiary-container">[INFO]</span>
+        <span class="text-on-surface/40" x-text="new Date(Date.now()-9000).toUTCString().split(' ')[4]">--:--:--</span>
+        <span>BACKGROUND_SYNC_PENDING: {% if wifi_connected %}QUEUED{% else %}LOW_SIGNAL_DENSITY{% endif %}</span>
+      </div>
+      <div class="flex gap-4 animate-pulse">
+        <span class="text-primary-container">[WARN]</span>
+        <span class="text-on-surface/40" x-text="new Date(Date.now()-13000).toUTCString().split(' ')[4]">--:--:--</span>
+        <span>LOW_VOLTAGE_DETECTED: AUX_BANK_03</span>
+      </div>
+    </div>
+  </div>
+
 </main>
 {% endblock %}
