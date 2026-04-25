@@ -97,8 +97,11 @@ async def uninstall_module(module: Module, settings: Settings) -> None:
     await cancel_download(module.id)
     part = _part_path(module, settings)
     final = _final_path(module, settings)
+    mismatch = _mismatch_path(module, settings)
     if part.exists():
         part.unlink()
+    if mismatch.exists():
+        mismatch.unlink()
     if final.exists():
         final.unlink()
     if module.category != "maps":
@@ -128,6 +131,34 @@ async def deactivate_module(module: Module, settings: Settings) -> None:
     if module.category != "maps":
         _kiwix_remove(module, settings)
     _signal_service(module)
+
+
+async def accept_checksum_mismatch(module: Module, settings: Settings) -> None:
+    mismatch = _mismatch_path(module, settings)
+    part = _part_path(module, settings)
+    if not mismatch.exists() or not part.exists():
+        raise RuntimeError(f"No checksum mismatch pending for {module.id}")
+    actual_digest = mismatch.read_text().strip()
+    final = _final_path(module, settings)
+    final.parent.mkdir(parents=True, exist_ok=True)
+    part.rename(final)
+    mismatch.unlink()
+    registry = load_registry(settings)
+    for m in registry.modules:
+        if m.id == module.id:
+            m.installed_version = module.latest_version
+            m.installed_checksum = actual_digest
+            m.active = True
+            break
+    save_registry(settings, registry)
+    if module.category != "maps":
+        _kiwix_add(module, settings)
+    _signal_service(module)
+
+
+async def discard_checksum_mismatch(module: Module, settings: Settings) -> None:
+    _part_path(module, settings).unlink(missing_ok=True)
+    _mismatch_path(module, settings).unlink(missing_ok=True)
 
 
 # ── Kiwix and service signals ─────────────────────────────────────────────────

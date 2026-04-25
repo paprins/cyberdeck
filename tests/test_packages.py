@@ -162,6 +162,67 @@ async def test_uninstall_clears_registry_fields(tmp_settings):
     assert updated.active is False
 
 
+async def test_accept_checksum_mismatch_installs_file(tmp_settings, monkeypatch):
+    m = _mod(checksum="sha256:expected")
+    _seed(tmp_settings, [m])
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    mismatch_file = tmp_settings.downloads_dir / "medical-wikimed.mismatch"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"file content")
+    mismatch_file.write_text("sha256:actual")
+    monkeypatch.setattr(pkg_service, "_kiwix_add", lambda *a: None)
+    monkeypatch.setattr(pkg_service, "_signal_service", lambda *a: None)
+
+    await pkg_service.accept_checksum_mismatch(m, tmp_settings)
+
+    final = tmp_settings.zim_dir / "medical-wikimed.zim"
+    assert final.exists(), "file must be moved to final path"
+    assert not part.exists(), ".part must be gone"
+    assert not mismatch_file.exists(), ".mismatch must be gone"
+    reg = load_registry(tmp_settings)
+    mod = reg.modules[0]
+    assert mod.installed_checksum == "sha256:actual"
+    assert mod.installed_version == "2024-10"
+    assert mod.active is True
+
+
+async def test_accept_checksum_mismatch_raises_if_no_mismatch_pending(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    with pytest.raises(RuntimeError):
+        await pkg_service.accept_checksum_mismatch(m, tmp_settings)
+
+
+async def test_discard_checksum_mismatch_deletes_files(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    mismatch_file = tmp_settings.downloads_dir / "medical-wikimed.mismatch"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"content")
+    mismatch_file.write_text("sha256:actual")
+
+    await pkg_service.discard_checksum_mismatch(m, tmp_settings)
+
+    assert not part.exists()
+    assert not mismatch_file.exists()
+
+
+async def test_uninstall_clears_mismatch_file(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    mismatch_file = tmp_settings.downloads_dir / "medical-wikimed.mismatch"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"content")
+    mismatch_file.write_text("sha256:actual")
+
+    await pkg_service.uninstall_module(m, tmp_settings)
+
+    assert not part.exists()
+    assert not mismatch_file.exists()
+
+
 # ── activate / deactivate ─────────────────────────────────────────────────────
 
 async def test_activate_sets_active_true(tmp_settings, monkeypatch):
