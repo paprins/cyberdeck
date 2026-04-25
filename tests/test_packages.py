@@ -95,6 +95,30 @@ def test_get_download_status_maps_uses_mbtiles(tmp_settings):
     assert result["status"] == "installed"
 
 
+def test_get_download_status_checksum_mismatch(tmp_settings):
+    m = _mod(checksum="sha256:expected")
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    mismatch = tmp_settings.downloads_dir / "medical-wikimed.mismatch"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"x" * 1000)
+    mismatch.write_text("sha256:actual")
+    result = pkg_service.get_download_status(m, tmp_settings)
+    assert result["status"] == "checksum_mismatch"
+    assert result["actual_checksum"] == "sha256:actual"
+    assert result["expected_checksum"] == "sha256:expected"
+    assert result["pct"] == 100
+
+
+def test_get_download_status_interrupted_without_mismatch_file(tmp_settings):
+    m = _mod()
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"x" * 500)
+    # No .mismatch file — should still be interrupted, not checksum_mismatch
+    result = pkg_service.get_download_status(m, tmp_settings)
+    assert result["status"] == "interrupted"
+
+
 # ── get_storage_info ──────────────────────────────────────────────────────────
 
 def test_get_storage_info_returns_used_and_free(tmp_settings):

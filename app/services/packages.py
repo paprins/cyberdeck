@@ -29,6 +29,10 @@ def _part_path(module: Module, settings: Settings) -> Path:
     return settings.downloads_dir / f"{module.id}.part"
 
 
+def _mismatch_path(module: Module, settings: Settings) -> Path:
+    return settings.downloads_dir / f"{module.id}.mismatch"
+
+
 # ── Status and storage ────────────────────────────────────────────────────────
 
 def get_download_status(module: Module, settings: Settings) -> dict:
@@ -46,6 +50,17 @@ def get_download_status(module: Module, settings: Settings) -> dict:
 
     bytes_downloaded = part.stat().st_size if part.exists() else 0
     pct = min(int(bytes_downloaded * 100 / total_bytes), 100) if total_bytes > 0 else 0
+
+    mismatch = _mismatch_path(module, settings)
+    if part.exists() and mismatch.exists():
+        return {
+            "status": "checksum_mismatch",
+            "actual_checksum": mismatch.read_text().strip(),
+            "expected_checksum": module.checksum,
+            "bytes_downloaded": bytes_downloaded,
+            "total_bytes": total_bytes,
+            "pct": 100,
+        }
 
     if module.id in _active_tasks:
         return {
