@@ -1,7 +1,8 @@
 services:
   kiwix:
     image: ghcr.io/kiwix/kiwix-serve:latest
-    command: --port 8080 /data/zim/
+    entrypoint: ["/bin/sh", "-c"]
+    command: "kiwix-serve --port=8080 /data/zim/*.zim"
     volumes:
       - ./data/zim:/data/zim:ro
     ports:
