@@ -76,3 +76,31 @@ def _uptime_s() -> int | None:
         return int(float(Path("/proc/uptime").read_text().split()[0]))
     except (OSError, ValueError, IndexError):
         return None
+
+
+_BACKLIGHT_ROOT = Path("/sys/class/backlight")
+
+
+def read_brightness(_root: Path = _BACKLIGHT_ROOT) -> int | None:
+    for brightness_path in _root.glob("*/brightness"):
+        try:
+            raw = int(brightness_path.read_text().strip())
+            max_raw = int((brightness_path.parent / "max_brightness").read_text().strip())
+            if max_raw == 0:
+                return None
+            return min(100, round(raw * 100 / max_raw))
+        except (OSError, ValueError):
+            pass
+    return None
+
+
+def write_brightness(pct: int, _root: Path = _BACKLIGHT_ROOT) -> None:
+    pct = max(0, min(100, pct))
+    for max_path in _root.glob("*/max_brightness"):
+        try:
+            max_raw = int(max_path.read_text().strip())
+            raw = round(pct * max_raw / 100)
+            (max_path.parent / "brightness").write_text(str(raw))
+            return
+        except OSError:
+            pass

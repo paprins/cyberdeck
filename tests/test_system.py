@@ -84,3 +84,52 @@ async def test_system_uptime_is_int_or_none(client):
     r = await client.get("/api/system")
     val = r.json()["uptime_s"]
     assert val is None or isinstance(val, int)
+
+
+import app.services.system as sys_svc
+
+
+# ── read_brightness ───────────────────────────────────────────────────────────
+
+def test_read_brightness_returns_scaled_pct(tmp_path):
+    dev = tmp_path / "rpi_backlight"
+    dev.mkdir()
+    (dev / "brightness").write_text("128")
+    (dev / "max_brightness").write_text("255")
+    assert sys_svc.read_brightness(_root=tmp_path) == 50
+
+
+def test_read_brightness_full_on(tmp_path):
+    dev = tmp_path / "rpi_backlight"
+    dev.mkdir()
+    (dev / "brightness").write_text("255")
+    (dev / "max_brightness").write_text("255")
+    assert sys_svc.read_brightness(_root=tmp_path) == 100
+
+
+def test_read_brightness_returns_none_when_no_device(tmp_path):
+    assert sys_svc.read_brightness(_root=tmp_path) is None
+
+
+# ── write_brightness ──────────────────────────────────────────────────────────
+
+def test_write_brightness_scales_and_writes(tmp_path):
+    dev = tmp_path / "rpi_backlight"
+    dev.mkdir()
+    (dev / "max_brightness").write_text("255")
+    (dev / "brightness").write_text("0")
+    sys_svc.write_brightness(50, _root=tmp_path)
+    assert int((dev / "brightness").read_text()) == 128
+
+
+def test_write_brightness_clamps_above_100(tmp_path):
+    dev = tmp_path / "rpi_backlight"
+    dev.mkdir()
+    (dev / "max_brightness").write_text("255")
+    (dev / "brightness").write_text("0")
+    sys_svc.write_brightness(150, _root=tmp_path)
+    assert int((dev / "brightness").read_text()) == 255
+
+
+def test_write_brightness_noop_when_no_device(tmp_path):
+    sys_svc.write_brightness(50, _root=tmp_path)  # must not raise
