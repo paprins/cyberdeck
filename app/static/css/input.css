@@ -130,6 +130,6 @@
 
   /* Scrollbar */
   ::-webkit-scrollbar       { width: 4px; }
-  ::-webkit-scrollbar-track { background: #0e0e0e; }
-  ::-webkit-scrollbar-thumb { background: #ff6b00; }
+  ::-webkit-scrollbar-track { background: var(--color-surface-container-lowest); }
+  ::-webkit-scrollbar-thumb { background: var(--color-primary-container); }
 }

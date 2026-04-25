@@ -21,6 +21,8 @@
     --text-2xl--line-height: calc(2 / 1.5);
     --text-4xl: 2.25rem;
     --text-4xl--line-height: calc(2.5 / 2.25);
+    --text-5xl: 3rem;
+    --text-5xl--line-height: 1;
     --font-weight-bold: 700;
     --tracking-tighter: -0.05em;
     --tracking-tight: -0.025em;
@@ -419,8 +421,14 @@
   .h-full {
     height: 100%;
   }
+  .max-h-1\/2 {
+    max-height: calc(1 / 2 * 100%);
+  }
   .min-h-0 {
     min-height: calc(var(--spacing) * 0);
+  }
+  .min-h-1\/2 {
+    min-height: calc(1 / 2 * 100%);
   }
   .w-2 {
     width: calc(var(--spacing) * 2);
@@ -776,6 +784,10 @@
   .text-4xl {
     font-size: var(--text-4xl);
     line-height: var(--tw-leading, var(--text-4xl--line-height));
+  }
+  .text-5xl {
+    font-size: var(--text-5xl);
+    line-height: var(--tw-leading, var(--text-5xl--line-height));
   }
   .text-lg {
     font-size: var(--text-lg);
@@ -1206,10 +1218,10 @@
     width: 4px;
   }
   ::-webkit-scrollbar-track {
-    background: #0e0e0e;
+    background: var(--color-surface-container-lowest);
   }
   ::-webkit-scrollbar-thumb {
-    background: #ff6b00;
+    background: var(--color-primary-container);
   }
 }
 @property --tw-rotate-x {

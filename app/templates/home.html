@@ -1,17 +1,19 @@
 {% extends "base.html" %}
 
 {% block content %}
-<main class="flex-1 overflow-hidden flex flex-col p-8">
+<main class="flex-1 overflow-hidden flex flex-col p-8"
+      x-data="{ now: Date.now() }"
+      x-init="setInterval(() => now = Date.now(), 1000)">
 
   {#-- Category metadata: icon, badge, image --#}
   {%- set META = {
-    'medical':    {'icon': 'medication',   'badge': 'CRITICAL', 'badge_bg': 'bg-error-container',        'badge_text': 'text-on-error-container'},
-    'food':       {'icon': 'inventory',    'badge': 'RESOURCE', 'badge_bg': 'bg-secondary-container',    'badge_text': 'text-on-secondary-container'},
-    'energy':     {'icon': 'bolt',         'badge': 'GRID_OFF', 'badge_bg': 'bg-tertiary-container',     'badge_text': 'text-on-tertiary'},
-    'mechanic':   {'icon': 'build',        'badge': None,       'badge_bg': '',                          'badge_text': ''},
-    'gardening':  {'icon': 'potted_plant', 'badge': None,       'badge_bg': '',                          'badge_text': ''},
-    'shelter':    {'icon': 'foundation',   'badge': None,       'badge_bg': '',                          'badge_text': ''},
-    'animal_care':{'icon': 'pets',         'badge': None,       'badge_bg': '',                          'badge_text': ''},
+    'medical':    {'icon': 'medication',   'badge': 'CRITICAL', 'badge_bg': 'bg-error-container',        'badge_text': 'text-on-error-container',     'image': '/static/images/categories/medical.png'},
+    'food':       {'icon': 'inventory',    'badge': 'RESOURCE', 'badge_bg': 'bg-secondary-container',    'badge_text': 'text-on-secondary-container',  'image': '/static/images/categories/food.png'},
+    'energy':     {'icon': 'bolt',         'badge': 'GRID_OFF', 'badge_bg': 'bg-tertiary-container',     'badge_text': 'text-on-tertiary',             'image': '/static/images/categories/energy.png'},
+    'mechanic':   {'icon': 'build',        'badge': None,       'badge_bg': '',                          'badge_text': '',                             'image': '/static/images/categories/mechanic.png'},
+    'gardening':  {'icon': 'potted_plant', 'badge': None,       'badge_bg': '',                          'badge_text': '',                             'image': '/static/images/categories/gardening.png'},
+    'shelter':    {'icon': 'foundation',   'badge': None,       'badge_bg': '',                          'badge_text': '',                             'image': '/static/images/categories/shelter.png'},
+    'animal_care':{'icon': 'pets',         'badge': None,       'badge_bg': '',                          'badge_text': '',                             'image': '/static/images/categories/animal_care.png'},
   } -%}
 
   {#-- Card grid --#}
@@ -19,15 +21,21 @@
 
     {% for card in cards %}
     {%- set cat = card.module.category -%}
-    {%- set meta = META.get(cat, {'icon': 'folder', 'badge': None, 'badge_bg': '', 'badge_text': ''}) -%}
+    {%- set meta = META.get(cat, {'icon': 'folder', 'badge': None, 'badge_bg': '', 'badge_text': '', 'image': ''}) -%}
     <a href="{{ card.url }}"
        class="bg-surface-container flex flex-col cursor-pointer group border-b-2 border-transparent hover:bg-surface-container-high hover:border-primary">
       {#-- Image --#}
-      <div class="flex-1 relative overflow-hidden" style="max-height: 50%;">
-        <img src="/static/images/categories/{{ cat }}.png"
+      <div class="flex-1 relative overflow-hidden max-h-1/2">
+        {% if meta.image %}
+        <img src="{{ meta.image }}"
              alt="{{ card.module.display_name }}"
-             class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0"
-             style="transition: none;">
+             class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none">
+        {% else %}
+        <div class="w-full h-full bg-surface-container-high flex items-center justify-center">
+          <span class="material-symbols-outlined text-on-surface/20 text-5xl"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">{{ meta.icon }}</span>
+        </div>
+        {% endif %}
         {% if meta.badge %}
         <div class="absolute top-2 right-2 {{ meta.badge_bg }} {{ meta.badge_text }} px-2 py-1 text-[10px] font-bold font-label uppercase">
           {{ meta.badge }}
@@ -35,7 +43,7 @@
         {% endif %}
       </div>
       {#-- Info --#}
-      <div class="p-4 flex flex-col" style="min-height: 50%;">
+      <div class="p-4 flex flex-col min-h-1/2">
         <div class="flex justify-between items-start mb-2">
           <h4 class="font-headline font-bold text-lg uppercase tracking-tight text-on-surface group-hover:text-primary leading-tight">
             {{ card.module.display_name | replace(' ', '_') }}
@@ -70,27 +78,27 @@
   <div class="mt-6 bg-surface-container-lowest p-4 font-label text-[10px] flex-shrink-0 border border-outline-variant/10">
     <div class="flex justify-between text-primary/40 mb-3 font-bold uppercase tracking-[0.2em]">
       <span>CORE_PROCESS_LOG</span>
-      <span>TIME_UTC: <span x-text="new Date().toUTCString().split(' ')[4]">00:00:00</span></span>
+      <span>TIME_UTC: <span x-text="new Date(now).toUTCString().split(' ')[4]">00:00:00</span></span>
     </div>
     <div class="space-y-1 opacity-70">
       <div class="flex gap-4">
         <span class="text-primary">[OK]</span>
-        <span class="text-on-surface/40" x-text="new Date(Date.now()-4000).toUTCString().split(' ')[4]">--:--:--</span>
+        <span class="text-on-surface/40" x-text="new Date(now-4000).toUTCString().split(' ')[4]">--:--:--</span>
         <span>MD5_CHECKSUM_VERIFIED: CYBERDECK_V1.DB</span>
       </div>
       <div class="flex gap-4">
         <span class="text-primary">[OK]</span>
-        <span class="text-on-surface/40" x-text="new Date(Date.now()-6000).toUTCString().split(' ')[4]">--:--:--</span>
+        <span class="text-on-surface/40" x-text="new Date(now-6000).toUTCString().split(' ')[4]">--:--:--</span>
         <span>ENCRYPTION_LAYER_RE-LOCKED: SECTOR_G14</span>
       </div>
       <div class="flex gap-4">
         <span class="text-tertiary-container">[INFO]</span>
-        <span class="text-on-surface/40" x-text="new Date(Date.now()-9000).toUTCString().split(' ')[4]">--:--:--</span>
+        <span class="text-on-surface/40" x-text="new Date(now-9000).toUTCString().split(' ')[4]">--:--:--</span>
         <span>BACKGROUND_SYNC_PENDING: {% if wifi_connected %}QUEUED{% else %}LOW_SIGNAL_DENSITY{% endif %}</span>
       </div>
       <div class="flex gap-4 animate-pulse">
         <span class="text-primary-container">[WARN]</span>
-        <span class="text-on-surface/40" x-text="new Date(Date.now()-13000).toUTCString().split(' ')[4]">--:--:--</span>
+        <span class="text-on-surface/40" x-text="new Date(now-13000).toUTCString().split(' ')[4]">--:--:--</span>
         <span>LOW_VOLTAGE_DETECTED: AUX_BANK_03</span>
       </div>
     </div>
