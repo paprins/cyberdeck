@@ -1,6 +1,42 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+usage() {
+    cat <<EOF
+Usage: $(basename "$0") (--kiosk | --headless)
+
+Install the Cyberdeck stack on this machine.
+
+Modes:
+  --kiosk     Install with Chromium for the touchscreen UI.
+  --headless  Install server only (no browser).
+
+You must pass exactly one of --kiosk or --headless.
+EOF
+}
+
+if [[ $# -eq 0 ]]; then
+    usage >&2
+    exit 1
+fi
+
+INSTALL_KIOSK=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --kiosk)    INSTALL_KIOSK=1 ;;
+        --headless) INSTALL_KIOSK=0 ;;
+        -h|--help)  usage; exit 0 ;;
+        *) echo "Unknown argument: $1" >&2; usage >&2; exit 1 ;;
+    esac
+    shift
+done
+
+if [[ -z "$INSTALL_KIOSK" ]]; then
+    echo "Error: must specify --kiosk or --headless" >&2
+    usage >&2
+    exit 1
+fi
+
 if [[ $EUID -eq 0 ]]; then
     echo "Error: run as a regular user (e.g. 'pi'), not root. The script uses sudo internally where needed." >&2
     exit 1
@@ -10,32 +46,40 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_DIR="/data"
 
 echo "=== Cyberdeck install ==="
+if [[ "$INSTALL_KIOSK" == "1" ]]; then
+    echo "→ Mode: kiosk"
+else
+    echo "→ Mode: headless"
+fi
 
 # ── System packages ──────────────────────────────────────
 # Includes pyenv's suggested build environment for compiling CPython from source.
 # See https://github.com/pyenv/pyenv/wiki#suggested-build-environment
 echo "Installing system packages..."
 sudo apt-get update -q
-sudo apt-get install -y \
-    kiwix-tools \
-    hdparm \
-    cpufrequtils \
-    chromium-browser \
-    fonts-noto \
-    git \
-    curl \
-    make \
-    build-essential \
-    libssl-dev \
-    zlib1g-dev \
-    libbz2-dev \
-    libreadline-dev \
-    libsqlite3-dev \
-    libncursesw5-dev \
-    libffi-dev \
-    liblzma-dev \
-    tk-dev \
+PACKAGES=(
+    kiwix-tools
+    hdparm
+    linux-cpupower
+    git
+    curl
+    make
+    build-essential
+    libssl-dev
+    zlib1g-dev
+    libbz2-dev
+    libreadline-dev
+    libsqlite3-dev
+    libncursesw5-dev
+    libffi-dev
+    liblzma-dev
+    tk-dev
     xz-utils
+)
+if [[ "$INSTALL_KIOSK" == "1" ]]; then
+    PACKAGES+=(chromium fonts-noto)
+fi
+sudo apt-get install -y "${PACKAGES[@]}"
 
 # ── mbtileserver (arm64 binary from GitHub releases) ─────
 MBTILES_VERSION="0.10.0"
