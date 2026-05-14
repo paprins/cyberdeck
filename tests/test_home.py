@@ -37,7 +37,7 @@ async def test_home_renders_wordmark(client):
 async def test_home_import_module_card_always_present(client):
     r = await client.get("/")
     assert "IMPORT_MODULE" in r.text
-    assert 'href="/packages"' in r.text
+    assert 'href="/settings/packages"' in r.text
 
 
 async def test_home_shows_active_module_name(client, tmp_settings):
@@ -53,7 +53,7 @@ async def test_home_shows_active_module_name(client, tmp_settings):
     )
     save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert "Medical Wiki" in r.text or "MEDICAL_WIKI" in r.text
+    assert "Medical_Wiki" in r.text
 
 
 async def test_home_shows_module_size(client, tmp_settings):
@@ -72,7 +72,7 @@ async def test_home_shows_module_size(client, tmp_settings):
     assert "3.2" in r.text
 
 
-async def test_home_maps_module_has_mbtiles_url(client, tmp_settings):
+async def test_home_maps_module_has_viewer_url(client, tmp_settings):
     reg = Registry(
         update_server="https://example.com/manifest.json",
         modules=[
@@ -85,10 +85,10 @@ async def test_home_maps_module_has_mbtiles_url(client, tmp_settings):
     )
     save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert 'href="http://localhost:8081/' in r.text
+    assert 'href="/view?url=http://localhost:8081/' in r.text
 
 
-async def test_home_medical_module_has_kiwix_url(client, tmp_settings):
+async def test_home_medical_module_has_viewer_url(client, tmp_settings):
     reg = Registry(
         update_server="https://example.com/manifest.json",
         modules=[
@@ -101,7 +101,14 @@ async def test_home_medical_module_has_kiwix_url(client, tmp_settings):
     )
     save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert 'href="http://localhost:8080/medical-wikimed/' in r.text
+    assert 'href="/view?url=http://localhost:8080/medical-wikimed/' in r.text
+
+
+async def test_view_route_renders_iframe(client):
+    r = await client.get("/view?url=http://localhost:8080/test/")
+    assert r.status_code == 200
+    assert "http://localhost:8080/test/" in r.text
+    assert "<iframe" in r.text
 
 
 async def test_home_inactive_modules_not_shown(client, tmp_settings):

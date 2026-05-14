@@ -1,8 +1,6 @@
 from __future__ import annotations
-from pathlib import Path
-from fastapi import APIRouter, Request, Response
-from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Response
+from fastapi.responses import JSONResponse
 import httpx
 
 from app.config import Settings
@@ -15,51 +13,14 @@ from app.services.packages import (
     deactivate_module,
     discard_checksum_mismatch,
     get_download_status,
-    get_storage_info,
     start_download,
     uninstall_module,
 )
 from app.services.registry import load_registry
-from app.services.system import read_system_status
-
-_TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 
 
 def make_router(cfg: Settings) -> APIRouter:
     router = APIRouter()
-    templates = Jinja2Templates(directory=_TEMPLATE_DIR)
-
-    @router.get("/packages", response_class=HTMLResponse)
-    async def packages_page(request: Request):
-        registry = load_registry(cfg)
-        status = read_system_status(cfg)
-        storage = get_storage_info(cfg)
-        all_statuses = {m.id: get_download_status(m, cfg) for m in registry.modules}
-
-        updates = [m for m in registry.modules if m.has_update]
-        installed = [
-            m for m in registry.modules
-            if (m.is_installed and not m.has_update)
-            or (not m.is_installed and all_statuses[m.id]["status"] in ("downloading", "interrupted", "checksum_mismatch"))
-        ]
-        available = [
-            m for m in registry.modules
-            if not m.is_installed
-            and not m.has_update
-            and all_statuses[m.id]["status"] == "not_installed"
-        ]
-
-        return templates.TemplateResponse(request, "packages.html", {
-            "updates": updates,
-            "installed": installed,
-            "available": available,
-            "module_statuses": all_statuses,
-            "storage": storage,
-            "has_active_download": bool(_active_tasks),
-            "battery_pct": status.battery_pct,
-            "battery_charging": status.battery_charging,
-            "wifi_connected": status.wifi_connected,
-        })
 
     @router.post("/api/packages/check-updates")
     async def check_updates_endpoint():

@@ -1,9 +1,14 @@
 services:
   kiwix:
     image: ghcr.io/kiwix/kiwix-serve:latest
-    entrypoint: ["/bin/sh", "-c", "/usr/local/bin/kiwix-serve --port=8080 /data/zim/*.zim"]
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        [ -f /data/zim/library.xml ] || printf '<?xml version="1.0" encoding="UTF-8"?>\n<library version="20110515">\n</library>\n' > /data/zim/library.xml
+        exec /usr/local/bin/kiwix-serve --port=8080 --library /data/zim/library.xml --monitorLibrary
     volumes:
-      - ./data/zim:/data/zim:ro
+      - ./data/zim:/data/zim
     ports:
       - "8080:8080"
     restart: on-failure

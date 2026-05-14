@@ -12,15 +12,34 @@
   class="bg-surface text-on-surface font-body h-full overflow-hidden flex flex-col"
   x-data="{
     battery_pct: {{ battery_pct | tojson }},
+    battery_charging: {{ battery_charging | tojson }},
     wifi_connected: {{ wifi_connected | tojson }},
     lastActivity: Date.now(),
     dimmed: false,
     restorePct: null,
+    batteryIcon() {
+      if (this.battery_charging) return 'battery_charging_full';
+      if (this.battery_pct === null) return 'battery_unknown';
+      if (this.battery_pct >= 90) return 'battery_full';
+      if (this.battery_pct >= 75) return 'battery_6_bar';
+      if (this.battery_pct >= 60) return 'battery_5_bar';
+      if (this.battery_pct >= 45) return 'battery_4_bar';
+      if (this.battery_pct >= 30) return 'battery_3_bar';
+      if (this.battery_pct >= 15) return 'battery_2_bar';
+      if (this.battery_pct >= 5)  return 'battery_1_bar';
+      return 'battery_0_bar';
+    },
+    batteryClass() {
+      if (this.battery_charging) return 'text-tertiary cursor-pointer hover:text-primary';
+      if (this.battery_pct !== null && this.battery_pct < 15) return 'text-error animate-pulse cursor-pointer';
+      return 'text-on-surface/70 cursor-pointer hover:text-primary';
+    },
     async poll() {
       try {
         const r = await fetch('/api/system');
         const d = await r.json();
         this.battery_pct = d.battery_pct;
+        this.battery_charging = d.battery_charging;
         this.wifi_connected = d.wifi_connected;
       } catch(e) {}
     },
@@ -130,25 +149,22 @@
     <!-- Right: status + shutdown -->
     <div class="flex items-center gap-6">
 
-      <!-- Language dropdown -->
-      <div class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 cursor-pointer border border-outline-variant/30">
-        <span class="material-symbols-outlined text-primary text-sm" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">language</span>
-        <span class="text-xs font-label uppercase font-bold">ENG_US</span>
-        <span class="material-symbols-outlined text-xs" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">expand_more</span>
-      </div>
-
       <!-- System icons -->
       <div class="flex items-center gap-4 text-on-surface/70">
-        <span class="material-symbols-outlined cursor-pointer hover:text-primary"
+        <a href="/settings" title="Settings" class="hover:text-primary">
+          <span class="material-symbols-outlined cursor-pointer"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">settings</span>
+        </a>
+        <span class="material-symbols-outlined"
               style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
-              title="Settings">settings</span>
-        <span class="material-symbols-outlined cursor-pointer hover:text-primary"
-              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
-              :title="'Battery: ' + (battery_pct ?? '?') + '%'">battery_charging_full</span>
+              :class="batteryClass()"
+              :title="'Battery: ' + (battery_pct ?? '?') + '%' + (battery_charging ? ' (charging)' : '')"
+              x-text="batteryIcon()">battery_full</span>
         <span class="material-symbols-outlined cursor-pointer"
               style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
-              :class="wifi_connected ? 'text-tertiary' : 'text-error'"
-              :title="wifi_connected ? 'Online' : 'Offline'">signal_cellular_connected_no_internet_4_bar</span>
+              :class="wifi_connected ? 'text-tertiary hover:text-primary' : 'text-error'"
+              :title="wifi_connected ? 'Online' : 'Offline'"
+              x-text="wifi_connected ? 'wifi' : 'wifi_off'">wifi</span>
 
         <div class="h-6 w-px bg-outline-variant/20 mx-2"></div>
 

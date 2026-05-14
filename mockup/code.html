@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&amp;family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "surface-variant": "#353535",
+              "surface": "#131313",
+              "primary-container": "#ff6b00",
+              "on-secondary": "#38294d",
+              "primary-fixed-dim": "#ffb693",
+              "surface-dim": "#131313",
+              "secondary-fixed-dim": "#d3beeb",
+              "on-surface-variant": "#e2bfb0",
+              "on-surface": "#e2e2e2",
+              "tertiary-container": "#059eff",
+              "outline": "#a98a7d",
+              "on-tertiary-fixed": "#001d35",
+              "on-error-container": "#ffdad6",
+              "background": "#131313",
+              "surface-container-lowest": "#0e0e0e",
+              "secondary-container": "#524267",
+              "tertiary-fixed-dim": "#9ccaff",
+              "surface-container": "#1f1f1f",
+              "surface-bright": "#393939",
+              "primary-fixed": "#ffdbcc",
+              "tertiary-fixed": "#d0e4ff",
+              "on-tertiary-fixed-variant": "#00497b",
+              "on-tertiary-container": "#003357",
+              "on-tertiary": "#003257",
+              "on-secondary-fixed-variant": "#4f4065",
+              "surface-container-low": "#1b1b1b",
+              "on-secondary-fixed": "#231437",
+              "on-primary-fixed": "#351000",
+              "primary": "#ffb693",
+              "secondary": "#d3beeb",
+              "on-primary-fixed-variant": "#7a3000",
+              "inverse-on-surface": "#303030",
+              "on-primary": "#561f00",
+              "on-error": "#690005",
+              "inverse-primary": "#a04100",
+              "surface-container-highest": "#353535",
+              "on-background": "#e2e2e2",
+              "tertiary": "#9ccaff",
+              "on-secondary-container": "#c4b0dd",
+              "surface-tint": "#ffb693",
+              "surface-container-high": "#2a2a2a",
+              "outline-variant": "#5a4136",
+              "on-primary-container": "#572000",
+              "inverse-surface": "#e2e2e2",
+              "error-container": "#93000a",
+              "secondary-fixed": "#eddcff",
+              "error": "#ffb4ab"
+            },
+            fontFamily: {
+              "headline": ["Space Grotesk"],
+              "body": ["Inter"],
+              "label": ["Space Grotesk"]
+            },
+            borderRadius: {"DEFAULT": "0px", "lg": "0px", "xl": "0px", "full": "9999px"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        body {
+            background-color: #131313;
+            color: #e2e2e2;
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .aspect-16-9-container {
+            aspect-ratio: 16 / 9;
+            width: 100%;
+            max-width: 100vw;
+            max-height: 100vh;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            background-color: #131313;
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #0e0e0e;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #ff6b00;
+        }
+    </style>
+</head>
+<body class="bg-black overflow-hidden">
+<div class="aspect-16-9-container shadow-2xl">
+<!-- TopAppBar -->
+<header class="bg-[#131313] w-full z-50 flex justify-between items-center px-6 h-16 border-b border-outline-variant/15 flex-shrink-0">
+<div class="flex items-center gap-6">
+<!-- MIMIRI ICON -->
+<div class="w-10 h-10 bg-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-on-primary-container text-2xl font-bold">radar</span>
+</div>
+<div class="flex flex-col">
+<div class="text-xl font-bold text-[#ff6b00] tracking-tighter font-headline uppercase leading-none">
+                        SURVIVAL_DASHBOARD
+                    </div>
+<div class="text-[8px] font-label text-primary/60 tracking-[0.3em] uppercase mt-1 leading-none">
+                        SECURE_ACCESS // SECTOR_G14
+                    </div>
+</div>
+<div class="hidden xl:flex items-center bg-surface-container-lowest px-4 py-1.5 gap-3 border border-outline-variant/20 ml-4">
+<span class="material-symbols-outlined text-primary text-sm">search</span>
+<input class="bg-transparent border-none focus:ring-0 text-[10px] font-label uppercase tracking-wider w-48 text-on-surface placeholder:opacity-30" placeholder="QUERY_DATABASE..." type="text"/>
+</div>
+</div>
+<div class="flex items-center gap-6">
+<!-- Language Dropdown -->
+<div class="flex items-center gap-2 bg-surface-container-highest px-3 py-1.5 cursor-pointer border border-outline-variant/30 hover:bg-surface-bright transition-none">
+<span class="material-symbols-outlined text-primary text-sm">language</span>
+<span class="text-xs font-label uppercase font-bold">ENG_US</span>
+<span class="material-symbols-outlined text-xs">expand_more</span>
+</div>
+<div class="flex items-center gap-4 text-on-surface/70">
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-none" title="settings">settings</span>
+<span class="material-symbols-outlined cursor-pointer hover:text-primary transition-none" title="battery_charging_full">battery_charging_full</span>
+<span class="material-symbols-outlined cursor-pointer text-error" title="signal_cellular_connected_no_internet_4_bar">signal_cellular_connected_no_internet_4_bar</span>
+<div class="h-6 w-px bg-outline-variant/20 mx-2"></div>
+<button class="flex items-center gap-2 text-error hover:bg-error-container/20 px-3 py-1.5 transition-none font-label text-xs tracking-widest uppercase border border-error/20">
+<span class="material-symbols-outlined text-sm">power_settings_new</span>
+                        SHUTDOWN
+                    </button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 overflow-hidden flex flex-col p-8">
+<!-- Main Categories Grid - Full Width/Height optimized -->
+<div class="flex-1 grid grid-cols-4 grid-rows-2 gap-4">
+<!-- Medical -->
+<div class="bg-surface-container flex flex-col hover:bg-surface-container-high transition-none cursor-pointer group border-b-2 border-transparent hover:border-primary">
+<div class="h-1/2 relative">
+<img class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none" data-alt="first aid kit with vintage medicinal bottles and trauma shears on a rugged slate surface with dramatic lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVbZK9O_TyHlERXKorYrui-ZFaW8W4snjBnaXBYU9Ws9Rz8E9OlZgUG6GSscs6o6WTfbdHNu2ssZeU0hjQWY9_UrrDEexrJHsBm4tJijLBpVlEdCnkty8_VQEOcPeSRe-ATh_0q6GeqPcK5sU3ib7l6wgNYCIopQAmmyvSFCDGfaxjpNdRy3PyfGAg6gikyEjzmU9sPMrSr1g98vecNDPad7DLBYv-1W2LEdhLNAU5Bk8C7VdmLXfCWO_nWmjPsVc0m6jIW9dohGTX"/>
+<div class="absolute top-2 right-2 bg-error text-on-error px-2 py-1 text-[10px] font-bold font-label uppercase">CRITICAL</div>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline font-bold text-lg uppercase tracking-tight group-hover:text-primary transition-none leading-tight">Medical_Archive</h4>
+<span class="material-symbols-outlined text-on-secondary-container text-xl">medication</span>
+</div>
+<p class="text-[11px] text-on-surface/60 font-body mb-4">Emergency trauma protocols, herbal antibiotic synthesis, and wound management database.</p>
+<div class="flex justify-between items-center mt-auto">
+<span class="text-[9px] font-label text-on-surface/40 uppercase">1,402_FILES</span>
+<span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+</div>
+</div>
+</div>
+<!-- Food -->
+<div class="bg-surface-container flex flex-col hover:bg-surface-container-high transition-none cursor-pointer group border-b-2 border-transparent hover:border-primary">
+<div class="h-1/2 relative">
+<img class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none" data-alt="preserved canned goods and dried grains in a dark cellar with sharp industrial metal shelving" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCRinx9caypBkK8i-5ngVv06a6RZOofuzh3T-M_Q9jN4nK1iGZVzK8ibrNbCuuxgFax6wnyiJQKafDFydUXnAzNQkdWXm-2djDPCmIpVkOhfhty1bOnP1-alcevZCglL4SL2N5dJcvspNLDmpQ5z1JhvFZMySk8RDZ-jzXNY4A7308KLcwi8EuNDXywkR46lBNXoMk8I9srYbSdN7gt3BeVGH1fPuGW-rnXfEiEXQuPmSkbhXIthR1dJJZojt7gDfIoXqNdHoVWJH_r"/>
+<div class="absolute top-2 right-2 bg-secondary-container text-on-secondary-container px-2 py-1 text-[10px] font-bold font-label uppercase">RESOURCE</div>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline font-bold text-lg uppercase tracking-tight group-hover:text-primary transition-none leading-tight">Food_Storage</h4>
+<span class="material-symbols-outlined text-on-secondary-container text-xl">inventory</span>
+</div>
+<p class="text-[11px] text-on-surface/60 font-body mb-4">Long-term preservation techniques, calorie rotation charts, and safe foraging guides.</p>
+<div class="flex justify-between items-center mt-auto">
+<span class="text-[9px] font-label text-on-surface/40 uppercase">856_FILES</span>
+<span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+</div>
+</div>
+</div>
+<!-- Energy -->
+<div class="bg-surface-container flex flex-col hover:bg-surface-container-high transition-none cursor-pointer group border-b-2 border-transparent hover:border-primary">
+<div class="h-1/2 relative">
+<img class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none" data-alt="improvised solar panel array and hand-wound copper coils in a rustic workshop setting with sparks" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDPmFPEsCeVuevnnypQfaAutLtL7SXK4Qlguv6fxs7tH1FJj7DV9ulKtTXOC2nHAwlCkRi_cKhq-aI__7Mex4boOcAa68ZogCI5I03bsZnBZ_wJN6zzRiGp5RzTGC44oTxKPhDiobSKKezuzQYS5LT5jqkk-zafSjeORjC_jCstylJuEgrD6aV9K3tjFGh24iIaPbT2eQWbxMSIhyxatoR75DjQsGsHIkdo5bnwFp2C38opIaropIOkqkWqohnjdmuHe9dDXjOxccZJ"/>
+<div class="absolute top-2 right-2 bg-tertiary-container text-on-tertiary px-2 py-1 text-[10px] font-bold font-label uppercase">GRID_OFF</div>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline font-bold text-lg uppercase tracking-tight group-hover:text-primary transition-none leading-tight">Energy_Gen</h4>
+<span class="material-symbols-outlined text-on-secondary-container text-xl">bolt</span>
+</div>
+<p class="text-[11px] text-on-surface/60 font-body mb-4">DIY solar assembly, kinetic battery blueprints, and bio-gas extraction manuals.</p>
+<div class="flex justify-between items-center mt-auto">
+<span class="text-[9px] font-label text-on-surface/40 uppercase">429_FILES</span>
+<span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+</div>
+</div>
+</div>
+<!-- Mechanic -->
+<div class="bg-surface-container flex flex-col hover:bg-surface-container-high transition-none cursor-pointer group border-b-2 border-transparent hover:border-primary">
+<div class="h-1/2 relative">
+<img class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none" data-alt="greasy heavy-duty wrenches and engine parts spread out on a dark steel workbench with focused warm light" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBF1lfqGJJA2rOQ1cHUdS_lvbyCAaw75sxb-sHXi4pQxhH-d0m7IR0F8sp2Kkg9tNuqKuRTqAah0UVQwqkW4prnuS8cwjh4wSsOQ6kbLePG7lvrD9Uuc0j2EkZ8JI7p3yvCDwb6He0wiwzTdaJKYvTn7GzD6khn0MJKdiI3E5tDcuw-XElLo3PT4gJhzBSn5bIRRcpHLXZMhHjL64pfDNtnIOCr0ixu6OrlZpoi3ItKLcYN9vpHisFCUOPIhJSwvpxgp6bUcGzRTWAJ"/>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline font-bold text-lg uppercase tracking-tight group-hover:text-primary transition-none leading-tight">Mechanic_Core</h4>
+<span class="material-symbols-outlined text-on-secondary-container text-xl">build</span>
+</div>
+<p class="text-[11px] text-on-surface/60 font-body mb-4">Internal combustion maintenance, improvised welding, and heavy machinery repair.</p>
+<div class="flex justify-between items-center mt-auto">
+<span class="text-[9px] font-label text-on-surface/40 uppercase">1,120_FILES</span>
+<span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+</div>
+</div>
+</div>
+<!-- Gardening -->
+<div class="bg-surface-container flex flex-col hover:bg-surface-container-high transition-none cursor-pointer group border-b-2 border-transparent hover:border-primary">
+<div class="h-1/2 relative">
+<img class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none" data-alt="micro-greens growing under purple LED hydroponic lights in a dark vertical farm setup" src="https://lh3.googleusercontent.com/aida-public/AB6AXuBHsw9rSbsEcvSylo7P-9qrYia6hMvfiIcNyPf6xz21qz3S3bdFrvagSdVMDkknLxaJq8wqnxKdgV1R_C5DJfr20hD_-nFsiIdqNDbs2xjTXM6SAA5LUaxIl_gqZSfBOuiAj-TrVrXWrVasL0JFUnDFvoK8AfvIVjGDOBxa3QjUL_MCrNdbpRflxxO919CFUcRRZI_WfZGZqpKNIw35ZrQG6_kzn5hvuF7ZeKgQ-qGjGx1thyQ7N4nNrPIIujkRaQRoRKdR41FuPlTj"/>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline font-bold text-lg uppercase tracking-tight group-hover:text-primary transition-none leading-tight">Growing_Food</h4>
+<span class="material-symbols-outlined text-on-secondary-container text-xl">potted_plant</span>
+</div>
+<p class="text-[11px] text-on-surface/60 font-body mb-4">Soil nutrient cycling, vertical hydroponics, and heirloom seed preservation.</p>
+<div class="flex justify-between items-center mt-auto">
+<span class="text-[9px] font-label text-on-surface/40 uppercase">677_FILES</span>
+<span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+</div>
+</div>
+</div>
+<!-- Shelter Building -->
+<div class="bg-surface-container flex flex-col hover:bg-surface-container-high transition-none cursor-pointer group border-b-2 border-transparent hover:border-primary">
+<div class="h-1/2 relative">
+<img class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none" data-alt="architectural cross-section of a reinforced concrete bunker with ventilation shafts in a blueprint style" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAkpqvBqN498T9_4-lwki5juprFhZG73qStRFNr-PR2V2wMjYLSItiQoGGOnuau9WB5wa7F8RMFeHP7sKg1a4BlcxtMfnjVf77BeLxeilb32JNTyvTgKABBITtBOfTtw_28QzHbAc72fbEiEkZV1plTmHuYdOgoCF6dnvLLb4l6eI2kzIadLN84hKu2PCVG_JrmpZjRDYt1JsOZVa22iRlUYNOuN7WGFCF_R3i08sEaEjgsy1nhgdStxe6JNVdReh1_E_Cg5wgDit0O"/>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline font-bold text-lg uppercase tracking-tight group-hover:text-primary transition-none leading-tight">Shelter_Build</h4>
+<span class="material-symbols-outlined text-on-secondary-container text-xl">foundation</span>
+</div>
+<p class="text-[11px] text-on-surface/60 font-body mb-4">Structural reinforcement, off-grid insulation, and covert fortification blueprints.</p>
+<div class="flex justify-between items-center mt-auto">
+<span class="text-[9px] font-label text-on-surface/40 uppercase">314_FILES</span>
+<span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+</div>
+</div>
+</div>
+<!-- Animal Care -->
+<div class="bg-surface-container flex flex-col hover:bg-surface-container-high transition-none cursor-pointer group border-b-2 border-transparent hover:border-primary">
+<div class="h-1/2 relative">
+<img class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none" data-alt="silhouette of a working dog in front of a wire fence at dusk with high contrast lighting" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAVV3rNXQgx5l0isWCiWRPxISMMVnkHNPbPSJd3Pt-VYJHCyVPJl_9Xubv_YUUTs5HRL_ApV_Glc5Bdh8vGIXQaFi95hSZbWKBIIz0rcDf6oJFzM2yfIxDkJLckT7tnn8VI73yqmI9US0tzT0-R9DRKzRav_U2tIL0H08kcQdw3mqaV5C_sxNulGXGU_gkyudiIxsiGFHqwvmrEdygJwg2zyXGmcqwAV1vrWOA_icInb-FpCcVc0_gbvGx9-D-imuIJX6Lyk7JVbUPV"/>
+</div>
+<div class="p-4 flex-1 flex flex-col">
+<div class="flex justify-between items-start mb-2">
+<h4 class="font-headline font-bold text-lg uppercase tracking-tight group-hover:text-primary transition-none leading-tight">Animal_Care</h4>
+<span class="material-symbols-outlined text-on-secondary-container text-xl">pets</span>
+</div>
+<p class="text-[11px] text-on-surface/60 font-body mb-4">Livestock management, veterinary basics, and working animal training modules.</p>
+<div class="flex justify-between items-center mt-auto">
+<span class="text-[9px] font-label text-on-surface/40 uppercase">288_FILES</span>
+<span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+</div>
+</div>
+</div>
+<!-- Empty State / Add More -->
+<div class="bg-surface-container-lowest border border-dashed border-outline-variant/30 flex flex-col items-center justify-center p-4 group hover:border-primary transition-none cursor-pointer">
+<span class="material-symbols-outlined text-4xl text-on-surface/20 group-hover:text-primary transition-none mb-2">add_box</span>
+<span class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/40 group-hover:text-primary transition-none font-bold">IMPORT_MODULE</span>
+</div>
+</div>
+<!-- System Log Feed (Footer Area) -->
+<div class="mt-6 bg-surface-container-lowest border border-outline-variant/10 p-4 font-label text-[10px] flex-shrink-0">
+<div class="flex justify-between text-primary/40 mb-3 font-bold uppercase tracking-[0.2em]">
+<span>CORE_PROCESS_LOG</span>
+<span>TIME_UTC: 14:02:44</span>
+</div>
+<div class="space-y-1 opacity-70">
+<div class="flex gap-4">
+<span class="text-primary">[OK]</span>
+<span class="text-on-surface/40">14:02:40</span>
+<span>MD5_CHECKSUM_VERIFIED: MIMIRI_V3.DB</span>
+</div>
+<div class="flex gap-4">
+<span class="text-primary">[OK]</span>
+<span class="text-on-surface/40">14:02:38</span>
+<span>ENCRYPTION_LAYER_RE-LOCKED: SECTOR_G14</span>
+</div>
+<div class="flex gap-4">
+<span class="text-tertiary-container">[INFO]</span>
+<span class="text-on-surface/40">14:02:35</span>
+<span>BACKGROUND_SYNC_PENDING: LOW_SIGNAL_DENSITY</span>
+</div>
+<div class="flex gap-4 animate-pulse">
+<span class="text-primary-container">[WARN]</span>
+<span class="text-on-surface/40">14:02:31</span>
+<span>LOW_VOLTAGE_DETECTED: AUX_BANK_03</span>
+</div>
+</div>
+</div>
+</main>
+</div>
+</body></html>

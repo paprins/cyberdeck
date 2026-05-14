@@ -7,13 +7,13 @@
 
   {#-- Category metadata: icon, badge, image --#}
   {%- set META = {
-    'medical':    {'icon': 'medication',   'badge': 'CRITICAL', 'badge_bg': 'bg-error-container',        'badge_text': 'text-on-error-container',     'image': '/static/images/categories/medical.png'},
-    'food':       {'icon': 'inventory',    'badge': 'RESOURCE', 'badge_bg': 'bg-secondary-container',    'badge_text': 'text-on-secondary-container',  'image': '/static/images/categories/food.png'},
-    'energy':     {'icon': 'bolt',         'badge': 'GRID_OFF', 'badge_bg': 'bg-tertiary-container',     'badge_text': 'text-on-tertiary',             'image': '/static/images/categories/energy.png'},
-    'mechanic':   {'icon': 'build',        'badge': None,       'badge_bg': '',                          'badge_text': '',                             'image': '/static/images/categories/mechanic.png'},
-    'gardening':  {'icon': 'potted_plant', 'badge': None,       'badge_bg': '',                          'badge_text': '',                             'image': '/static/images/categories/gardening.png'},
-    'shelter':    {'icon': 'foundation',   'badge': None,       'badge_bg': '',                          'badge_text': '',                             'image': '/static/images/categories/shelter.png'},
-    'animal_care':{'icon': 'pets',         'badge': None,       'badge_bg': '',                          'badge_text': '',                             'image': '/static/images/categories/animal_care.png'},
+    'medical':    {'icon': 'medication',   'badge': 'CRITICAL', 'badge_bg': 'bg-error-container',     'badge_text': 'text-on-error-container'},
+    'food':       {'icon': 'inventory',    'badge': 'RESOURCE', 'badge_bg': 'bg-secondary-container', 'badge_text': 'text-on-secondary-container'},
+    'energy':     {'icon': 'bolt',         'badge': 'GRID_OFF', 'badge_bg': 'bg-tertiary-container',  'badge_text': 'text-on-tertiary'},
+    'mechanic':   {'icon': 'build',        'badge': None,       'badge_bg': '',                       'badge_text': ''},
+    'gardening':  {'icon': 'potted_plant', 'badge': None,       'badge_bg': '',                       'badge_text': ''},
+    'shelter':    {'icon': 'foundation',   'badge': None,       'badge_bg': '',                       'badge_text': ''},
+    'animal_care':{'icon': 'pets',         'badge': None,       'badge_bg': '',                       'badge_text': ''},
   } -%}
 
   {#-- Card grid --#}
@@ -21,13 +21,14 @@
 
     {% for card in cards %}
     {%- set cat = card.module.category -%}
-    {%- set meta = META.get(cat, {'icon': 'folder', 'badge': None, 'badge_bg': '', 'badge_text': '', 'image': ''}) -%}
+    {%- set meta = META.get(cat, {'icon': 'folder', 'badge': None, 'badge_bg': '', 'badge_text': ''}) -%}
+    {%- set img = card.module.image or meta.image -%}
     <a href="{{ card.url }}"
        class="bg-surface-container flex flex-col cursor-pointer group border-b-2 border-transparent hover:bg-surface-container-high hover:border-primary">
       {#-- Image --#}
       <div class="flex-1 relative overflow-hidden max-h-1/2">
-        {% if meta.image %}
-        <img src="{{ meta.image }}"
+        {% if img %}
+        <img src="{{ img }}"
              alt="{{ card.module.display_name }}"
              class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none">
         {% else %}
@@ -63,7 +64,7 @@
     {% endfor %}
 
     {#-- IMPORT_MODULE card (always last) --#}
-    <a href="/packages"
+    <a href="/settings/packages"
        class="bg-surface-container-lowest flex flex-col items-center justify-center p-4 group hover:border-primary cursor-pointer border border-dashed border-outline-variant/30">
       <span class="material-symbols-outlined text-4xl text-on-surface/20 group-hover:text-primary mb-2"
             style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">add_box</span>

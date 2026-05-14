@@ -15,6 +15,7 @@ class Module(BaseModel):
     installed_checksum: Optional[str] = None
     download_url: Optional[str] = None
     active: bool = False
+    image: Optional[str] = None
 
     @computed_field
     @property

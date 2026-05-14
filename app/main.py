@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from app.config import Settings
 from app.services.registry import load_registry
+from app.services.packages import init_kiwix_library
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -17,6 +18,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     async def lifespan(app: FastAPI):
         for d in (cfg.zim_dir, cfg.maps_dir, cfg.downloads_dir, cfg.registry_path.parent):
             d.mkdir(parents=True, exist_ok=True)
+        init_kiwix_library(cfg)
         app.state.settings = cfg
         yield
 
@@ -24,6 +26,10 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     if _STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
+
+    data_static_dir = cfg.data_dir / "static"
+    if data_static_dir.exists():
+        app.mount("/data-static", StaticFiles(directory=data_static_dir), name="data-static")
 
     from app.routers import system as system_router
     app.include_router(system_router.make_router(cfg))
@@ -36,6 +42,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     from app.routers import packages as packages_router
     app.include_router(packages_router.make_router(cfg))
+
+    from app.routers import settings as settings_router
+    app.include_router(settings_router.make_router(cfg))
 
     @app.get("/health")
     async def health():

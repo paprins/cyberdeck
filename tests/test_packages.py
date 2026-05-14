@@ -400,29 +400,29 @@ async def client(app):
         yield c
 
 
-# ── GET /packages ─────────────────────────────────────────────────────────────
+# ── GET /settings/packages ────────────────────────────────────────────────────
 
 async def test_packages_page_returns_200(client):
-    r = await client.get("/packages")
+    r = await client.get("/settings/packages")
     assert r.status_code == 200
 
 
 async def test_packages_page_returns_html(client):
-    r = await client.get("/packages")
+    r = await client.get("/settings/packages")
     assert "text/html" in r.headers["content-type"]
 
 
 async def test_packages_page_shows_installed_module(client, tmp_settings):
     m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
     _seed(tmp_settings, [m])
-    r = await client.get("/packages")
+    r = await client.get("/settings/packages")
     assert "WikiMed" in r.text
 
 
 async def test_packages_page_shows_available_module(client, tmp_settings):
     m = _mod()
     _seed(tmp_settings, [m])
-    r = await client.get("/packages")
+    r = await client.get("/settings/packages")
     assert "WikiMed" in r.text
 
 
@@ -434,7 +434,7 @@ async def test_packages_page_shows_updates_section_when_update_exists(client, tm
         active=True,
     )
     _seed(tmp_settings, [m])
-    r = await client.get("/packages")
+    r = await client.get("/settings/packages")
     assert "UPDATES_AVAILABLE" in r.text
 
 
@@ -579,7 +579,7 @@ async def test_packages_page_shows_mismatch_module_in_installed_section(client, 
     part.parent.mkdir(parents=True, exist_ok=True)
     part.write_bytes(b"content")
     mismatch_file.write_text("sha256:actualhash")
-    r = await client.get("/packages")
+    r = await client.get("/settings/packages")
     assert r.status_code == 200
     assert "checksum_mismatch" in r.text
 
@@ -606,3 +606,86 @@ async def test_deactivate_endpoint_returns_204(client, tmp_settings, monkeypatch
     monkeypatch.setattr(pkg_service, "deactivate_module", _noop)
     r = await client.post("/api/packages/medical-wikimed/deactivate")
     assert r.status_code == 204
+
+
+# ── init_kiwix_library / _kiwix_add / _kiwix_remove ──────────────────────────
+
+def test_init_kiwix_library_creates_file(tmp_settings):
+    pkg_service.init_kiwix_library(tmp_settings)
+    library_xml = tmp_settings.zim_dir / "library.xml"
+    assert library_xml.exists()
+    assert "<library" in library_xml.read_text()
+
+
+def test_init_kiwix_library_is_idempotent(tmp_settings):
+    pkg_service.init_kiwix_library(tmp_settings)
+    pkg_service.init_kiwix_library(tmp_settings)
+    text = (tmp_settings.zim_dir / "library.xml").read_text()
+    assert text.count("<library") == 1
+
+
+def test_kiwix_add_writes_book_entry(tmp_settings, monkeypatch):
+    m = _mod()
+    pkg_service.init_kiwix_library(tmp_settings)
+    zim = tmp_settings.zim_dir / "medical-wikimed.zim"
+    zim.write_bytes(b"content")
+    monkeypatch.setattr(pkg_service, "_run", lambda cmd: None)
+    pkg_service._kiwix_add(m, tmp_settings)
+    text = (tmp_settings.zim_dir / "library.xml").read_text()
+    assert 'path="medical-wikimed.zim"' in text
+    assert 'name="medical-wikimed"' in text
+
+
+def test_kiwix_add_is_idempotent(tmp_settings, monkeypatch):
+    m = _mod()
+    pkg_service.init_kiwix_library(tmp_settings)
+    zim = tmp_settings.zim_dir / "medical-wikimed.zim"
+    zim.write_bytes(b"content")
+    monkeypatch.setattr(pkg_service, "_run", lambda cmd: None)
+    pkg_service._kiwix_add(m, tmp_settings)
+    pkg_service._kiwix_add(m, tmp_settings)
+    import xml.etree.ElementTree as ET
+    tree = ET.parse(tmp_settings.zim_dir / "library.xml")
+    assert len(tree.getroot().findall("book")) == 1
+
+
+def test_kiwix_remove_removes_book_entry(tmp_settings, monkeypatch):
+    m = _mod()
+    pkg_service.init_kiwix_library(tmp_settings)
+    zim = tmp_settings.zim_dir / "medical-wikimed.zim"
+    zim.write_bytes(b"content")
+    monkeypatch.setattr(pkg_service, "_run", lambda cmd: None)
+    pkg_service._kiwix_add(m, tmp_settings)
+    pkg_service._kiwix_remove(m, tmp_settings)
+    text = (tmp_settings.zim_dir / "library.xml").read_text()
+    assert "medical-wikimed.zim" not in text
+
+
+def test_kiwix_add_signals_kiwix_serve(tmp_settings, monkeypatch):
+    m = _mod()
+    pkg_service.init_kiwix_library(tmp_settings)
+    zim = tmp_settings.zim_dir / "medical-wikimed.zim"
+    zim.write_bytes(b"content")
+    calls = []
+    monkeypatch.setattr(pkg_service, "_run", lambda cmd: calls.append(cmd))
+    pkg_service._kiwix_add(m, tmp_settings)
+    assert any("kiwix-serve" in " ".join(c) for c in calls)
+
+
+def test_kiwix_remove_signals_kiwix_serve(tmp_settings, monkeypatch):
+    m = _mod()
+    pkg_service.init_kiwix_library(tmp_settings)
+    calls = []
+    monkeypatch.setattr(pkg_service, "_run", lambda cmd: calls.append(cmd))
+    pkg_service._kiwix_remove(m, tmp_settings)
+    assert any("kiwix-serve" in " ".join(c) for c in calls)
+
+
+def test_kiwix_add_logs_warning_when_zim_missing(tmp_settings, monkeypatch, caplog):
+    import logging
+    m = _mod()
+    pkg_service.init_kiwix_library(tmp_settings)
+    monkeypatch.setattr(pkg_service, "_run", lambda cmd: None)
+    with caplog.at_level(logging.WARNING, logger="app.services.packages"):
+        pkg_service._kiwix_add(m, tmp_settings)
+    assert any("not found" in r.message for r in caplog.records)

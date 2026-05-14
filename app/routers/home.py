@@ -18,14 +18,21 @@ class ModuleCard:
     url: str
 
 
-def _tile_url(module: Module, cfg: Settings) -> str:
+def _external_url(module: Module, cfg: Settings) -> str | None:
     if module.category == "maps":
         return f"http://localhost:{cfg.mbtiles_port}/"
-    if module.category == "packages":
-        return "/packages"
     if module.category == "internet":
         return "https://duckduckgo.com"
-    return f"http://localhost:{cfg.kiwix_port}/{module.id}/"
+    if module.category != "packages":
+        return f"http://localhost:{cfg.kiwix_port}/{module.id}/"
+    return None
+
+
+def _tile_url(module: Module, cfg: Settings) -> str:
+    if module.category == "packages":
+        return "/settings/packages"
+    ext = _external_url(module, cfg)
+    return f"/view?url={ext}" if ext else "/settings/packages"
 
 
 def make_router(cfg: Settings) -> APIRouter:
@@ -41,6 +48,17 @@ def make_router(cfg: Settings) -> APIRouter:
         return templates.TemplateResponse(request, "home.html", {
             "cards": cards,
             "battery_pct": status.battery_pct,
+            "battery_charging": status.battery_charging,
+            "wifi_connected": status.wifi_connected,
+        })
+
+    @router.get("/view", response_class=HTMLResponse)
+    async def view_service(request: Request, url: str):
+        status = read_system_status(cfg)
+        return templates.TemplateResponse(request, "viewer.html", {
+            "url": url,
+            "battery_pct": status.battery_pct,
+            "battery_charging": status.battery_charging,
             "wifi_connected": status.wifi_connected,
         })
 

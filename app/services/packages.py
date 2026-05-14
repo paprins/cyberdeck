@@ -161,22 +161,58 @@ async def discard_checksum_mismatch(module: Module, settings: Settings) -> None:
     _mismatch_path(module, settings).unlink(missing_ok=True)
 
 
-# ── Kiwix and service signals ─────────────────────────────────────────────────
+# ── Kiwix library.xml management ──────────────────────────────────────────────
+
+_LIBRARY_EMPTY = (
+    '<?xml version="1.0" encoding="UTF-8"?>\n'
+    '<library version="20110515">\n'
+    '</library>\n'
+)
+
+
+def init_kiwix_library(settings: Settings) -> None:
+    library_xml = settings.zim_dir / "library.xml"
+    if not library_xml.exists():
+        library_xml.parent.mkdir(parents=True, exist_ok=True)
+        library_xml.write_text(_LIBRARY_EMPTY, encoding="utf-8")
+
 
 def _kiwix_add(module: Module, settings: Settings) -> None:
+    import uuid
+    import xml.etree.ElementTree as ET
     library_xml = settings.zim_dir / "library.xml"
     zim_path = settings.zim_dir / f"{module.id}.zim"
-    if not library_xml.exists() or not zim_path.exists():
+    if not library_xml.exists():
         return
-    _run(["kiwix-manage", str(library_xml), "add", str(zim_path)])
+    if not zim_path.exists():
+        log.warning("kiwix_add: %s not found, skipping library update", zim_path)
+        return
+    tree = ET.parse(library_xml)
+    root = tree.getroot()
+    for book in root.findall("book"):
+        if book.get("path") == f"{module.id}.zim":
+            return
+    ET.SubElement(root, "book", {
+        "id": str(uuid.uuid5(uuid.NAMESPACE_URL, module.id)),
+        "path": f"{module.id}.zim",
+        "name": module.id,
+    })
+    tree.write(str(library_xml), encoding="unicode", xml_declaration=True)
     _run(["pkill", "-HUP", "kiwix-serve"])
 
 
 def _kiwix_remove(module: Module, settings: Settings) -> None:
+    import xml.etree.ElementTree as ET
     library_xml = settings.zim_dir / "library.xml"
     if not library_xml.exists():
         return
-    _run(["kiwix-manage", str(library_xml), "delete", module.id])
+    tree = ET.parse(library_xml)
+    root = tree.getroot()
+    for book in root.findall("book"):
+        if book.get("path") == f"{module.id}.zim":
+            root.remove(book)
+            break
+    tree.write(str(library_xml), encoding="unicode", xml_declaration=True)
     _run(["pkill", "-HUP", "kiwix-serve"])
 
 
@@ -187,9 +223,11 @@ def _signal_service(module: Module) -> None:
 
 def _run(cmd: list[str]) -> None:
     try:
-        subprocess.run(cmd, check=False, capture_output=True)
+        result = subprocess.run(cmd, check=False, capture_output=True)
+        if result.returncode != 0:
+            log.debug("%s exited %d", cmd[0], result.returncode)
     except FileNotFoundError:
-        pass
+        log.debug("%s not found, skipping signal", cmd[0])
 
 
 # ── cancel_download (needed by uninstall) ─────────────────────────────────────
