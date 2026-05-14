@@ -30,7 +30,7 @@
       </a>
     </nav>
     <div class="mt-auto px-4 py-3 border-t border-outline-variant/15">
-      <div class="font-label text-[8px] text-on-surface/20 tracking-[0.12em] uppercase">FIRMWARE_v1.0</div>
+      <div class="font-label text-[8px] text-on-surface/20 tracking-[0.12em] uppercase">FIRMWARE_v{{ current_version | default('dev') }}</div>
     </div>
   </aside>
 
@@ -348,6 +348,156 @@
         </div>
         <span class="material-symbols-outlined text-[14px] text-on-surface/50 flex-shrink-0"
               style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 20">lock</span>
+      </div>
+
+      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/25">FIRMWARE</div>
+
+      <div class="px-3 py-[11px] mb-1 border border-outline-variant/15"
+           x-data="{
+             current: '{{ current_version }}',
+             status: {{ upgrade_status | tojson }},
+             releases: [],
+             checking: false,
+             checkError: '',
+             confirmOpen: false,
+             selectedRelease: null,
+             _poll: null,
+             get inFlight() {
+               return ['downloading','verifying','extracting','building_venv','migrating','swapping','restarting','health_checking']
+                 .includes(this.status.phase);
+             },
+             init() {
+               if (this.inFlight) this.startPolling();
+             },
+             async check() {
+               this.checking = true; this.checkError = '';
+               try {
+                 const r = await fetch('/api/upgrade/check', {method:'POST'});
+                 if (!r.ok) { this.checkError = 'CHECK_FAILED_' + r.status; return; }
+                 const d = await r.json();
+                 this.releases = d.releases;
+                 if (this.releases.length === 0) { this.checkError = 'UP_TO_DATE'; }
+               } catch(e) { this.checkError = 'NETWORK_ERROR'; }
+               this.checking = false;
+               setTimeout(() => { if (this.checkError === 'UP_TO_DATE') this.checkError = ''; }, 4000);
+             },
+             confirmInstall(release) {
+               this.selectedRelease = release;
+               this.confirmOpen = true;
+             },
+             async install() {
+               if (!this.selectedRelease) return;
+               this.confirmOpen = false;
+               try {
+                 const r = await fetch('/api/upgrade/install', {
+                   method:'POST',
+                   headers:{'Content-Type':'application/json'},
+                   body: JSON.stringify({
+                     version: this.selectedRelease.version,
+                     channel: this.selectedRelease.channel,
+                     tarball_url: this.selectedRelease.tarball_url,
+                     signature_url: this.selectedRelease.signature_url,
+                   })
+                 });
+                 if (r.status === 202) { this.startPolling(); }
+                 else { const d = await r.json(); this.checkError = 'INSTALL_FAILED'; }
+               } catch(e) { this.checkError = 'NETWORK_ERROR'; }
+             },
+             startPolling() {
+               if (this._poll) return;
+               this._poll = setInterval(() => this.pollStatus(), 1500);
+             },
+             stopPolling() {
+               if (this._poll) { clearInterval(this._poll); this._poll = null; }
+             },
+             async pollStatus() {
+               try {
+                 const r = await fetch('/api/upgrade/status');
+                 this.status = await r.json();
+                 if (!this.inFlight) {
+                   this.stopPolling();
+                   if (this.status.phase === 'success') setTimeout(() => location.reload(), 2000);
+                 }
+               } catch(e) {}
+             },
+             async cancel() {
+               await fetch('/api/upgrade/cancel', {method:'POST'});
+               this.status = {phase: 'idle', current_version: this.current};
+             }
+           }">
+        <div class="flex items-center gap-3">
+          <span class="material-symbols-outlined text-[18px] text-on-surface flex-shrink-0"
+                style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">system_update</span>
+          <div class="flex-1 min-w-0">
+            <div class="font-headline text-[11px] text-on-surface tracking-[0.06em]">FIRMWARE_UPDATE</div>
+            <div class="font-body text-[9px] text-on-surface/50 mt-[2px]">
+              Current: v<span x-text="current"></span>
+              <template x-if="status.phase !== 'idle' && !inFlight">
+                <span class="ml-2"
+                      :class="status.phase === 'success' ? 'text-tertiary' : 'text-error'"
+                      x-text="status.phase.toUpperCase()"></span>
+              </template>
+            </div>
+          </div>
+          <div class="flex gap-2 flex-shrink-0">
+            <template x-if="!inFlight && releases.length === 0">
+              <button @click="check()" :disabled="checking"
+                      :class="checking ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
+                      class="font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/40 tracking-[0.06em]">
+                <span x-show="!checking">CHECK</span>
+                <span x-show="checking" x-cloak>...</span>
+              </button>
+            </template>
+            <template x-if="!inFlight && releases.length > 0">
+              <button @click="confirmInstall(releases[0])"
+                      class="font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/50 bg-primary-container/10 tracking-[0.06em]">
+                INSTALL v<span x-text="releases[0].version"></span>
+              </button>
+            </template>
+            <template x-if="(status.phase === 'failed' || status.phase === 'rolled_back') && !inFlight">
+              <button @click="cancel()"
+                      class="font-headline text-[10px] font-bold px-3 py-[6px] border text-on-surface/40 border-outline-variant/30 tracking-[0.06em]">
+                DISMISS
+              </button>
+            </template>
+          </div>
+        </div>
+
+        <div x-show="checkError" x-cloak class="font-headline text-[10px] tracking-[0.08em] text-error mt-2 uppercase">
+          <span x-text="checkError"></span>
+        </div>
+
+        <div x-show="inFlight" x-cloak class="mt-3">
+          <div class="font-headline text-[9px] tracking-[0.16em] text-primary-container uppercase"
+               x-text="status.phase + '...'"></div>
+          <div class="h-[3px] bg-surface-container-high mt-2 overflow-hidden">
+            <div class="h-full bg-primary-container" style="width:100%"></div>
+          </div>
+          <div x-show="status.message" class="font-body text-[9px] text-on-surface/40 mt-1" x-text="status.message"></div>
+        </div>
+
+        <!-- Confirm modal -->
+        <div x-show="confirmOpen" x-cloak
+             @keydown.escape.window="confirmOpen = false"
+             @click.self="confirmOpen = false"
+             class="fixed inset-0 z-50 bg-background/88 flex items-center justify-center p-4">
+          <div class="bg-surface-container-lowest border border-outline-variant/60 p-6 w-full max-w-sm" @click.stop>
+            <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-primary-container mb-3">INSTALL_FIRMWARE</div>
+            <p class="font-body text-[12px] text-on-surface/60 mb-1">
+              Install v<span x-text="selectedRelease?.version"></span>?
+            </p>
+            <p class="font-body text-[10px] text-on-surface/40 mb-6">
+              From <span x-text="selectedRelease?.channel"></span> channel. The device will restart;
+              it will roll back automatically if the new version fails to start.
+            </p>
+            <div class="flex gap-3">
+              <button @click="confirmOpen = false"
+                      class="flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">CANCEL</button>
+              <button @click="install()"
+                      class="flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-primary-container/50 text-primary-container hover:bg-primary-container/10">INSTALL</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/25">SYSTEM</div>

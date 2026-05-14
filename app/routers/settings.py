@@ -12,6 +12,7 @@ from app.services.packages import (
 )
 from app.services.registry import load_registry
 from app.services.system import read_system_status
+from app.services.upgrade import current_version, read_status
 
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 
@@ -32,6 +33,8 @@ def make_router(cfg: Settings) -> APIRouter:
     async def settings_page(request: Request):
         return templates.TemplateResponse(request, "settings.html", {
             "active_tab": "settings",
+            "current_version": current_version(cfg) or "dev",
+            "upgrade_status": read_status(cfg).model_dump(mode="json"),
             **_sys_ctx(),
         })
 

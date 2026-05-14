@@ -7,6 +7,9 @@ class Settings(BaseSettings):
     app_port: int = 8000
     kiwix_port: int = 8080
     mbtiles_port: int = 8081
+    install_root: Path = Path("/opt/cyberdeck")
+    github_repo: str = ""
+    upgrade_versions_keep: int = 3
 
     model_config = SettingsConfigDict(env_prefix="CYBERDECK_")
 
@@ -25,3 +28,15 @@ class Settings(BaseSettings):
     @property
     def registry_path(self) -> Path:
         return self.data_dir / "packages" / "registry.json"
+
+    @property
+    def upgrade_dir(self) -> Path:
+        return self.install_root / "upgrade"
+
+    @property
+    def upgrade_state_path(self) -> Path:
+        return self.upgrade_dir / "state.json"
+
+    @property
+    def current_symlink(self) -> Path:
+        return self.install_root / "current"

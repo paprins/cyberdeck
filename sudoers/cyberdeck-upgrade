@@ -1,0 +1,3 @@
+# Allows the cyberdeck service user to restart its own unit during an upgrade.
+# install.sh substitutes 'pi' with the actual run-as user.
+pi ALL=(root) NOPASSWD: /bin/systemctl restart cyberdeck.service

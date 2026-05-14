@@ -20,7 +20,9 @@ async def client(app):
 async def test_health_returns_ok(client):
     r = await client.get("/health")
     assert r.status_code == 200
-    assert r.json() == {"status": "ok"}
+    body = r.json()
+    assert body["status"] == "ok"
+    assert "version" in body
 
 
 async def test_status_returns_module_count(client, tmp_settings):

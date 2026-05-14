@@ -49,9 +49,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.routers import wifi as wifi_router
     app.include_router(wifi_router.make_router(cfg))
 
+    from app.routers import upgrade as upgrade_router
+    app.include_router(upgrade_router.make_router(cfg))
+
     @app.get("/health")
     async def health():
-        return {"status": "ok"}
+        from app.services.upgrade import current_version
+        return {"status": "ok", "version": current_version(cfg)}
 
     @app.get("/api/status")
     async def status():

@@ -2,6 +2,7 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=macos,python,virtualenv
 
 ## Custom ###
+**/release.key
 *.tar.gz
 data/zim/
 data/maps/

@@ -1,0 +1,84 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set version from tag
+        run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
+
+      - name: Stamp pyproject.toml version
+        run: sed -i "s/^version = .*/version = \"${VERSION}\"/" pyproject.toml
+
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install build tooling
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y minisign
+          python -m pip install --upgrade pip build
+
+      - name: Build wheel + dependency wheels
+        run: |
+          mkdir -p dist/wheels
+          pip wheel --wheel-dir=dist/wheels .
+
+      - name: Download mbtileserver arm64 binary
+        run: |
+          MBTILES_VERSION=0.11.0
+          curl -fsSL \
+            "https://github.com/consbio/mbtileserver/releases/download/v${MBTILES_VERSION}/mbtileserver_v${MBTILES_VERSION}_linux_arm64.zip" \
+            -o /tmp/mbtileserver.zip
+          mkdir -p bin
+          unzip -j /tmp/mbtileserver.zip "mbtileserver_v${MBTILES_VERSION}_linux_arm64" -d bin/
+          mv "bin/mbtileserver_v${MBTILES_VERSION}_linux_arm64" bin/mbtileserver
+          chmod +x bin/mbtileserver
+
+      - name: Assemble tarball
+        run: |
+          STAGE="cyberdeck-v${VERSION}"
+          mkdir -p "${STAGE}"
+          rsync -a \
+            --exclude='.git/' \
+            --exclude='.github/' \
+            --exclude='.venv/' \
+            --exclude='__pycache__/' \
+            --exclude='*.pyc' \
+            --exclude='tests/' \
+            --exclude='cyberdeck.tar.gz' \
+            --exclude="${STAGE}/" \
+            ./ "${STAGE}/"
+          mkdir -p "${STAGE}/dist/wheels"
+          cp dist/wheels/*.whl "${STAGE}/dist/wheels/"
+          cp -r bin "${STAGE}/bin"
+          echo "${VERSION}" > "${STAGE}/VERSION"
+          tar czf "cyberdeck-v${VERSION}.tar.gz" "${STAGE}/"
+
+      - name: Sign tarball
+        env:
+          MINISIGN_KEY: ${{ secrets.MINISIGN_RELEASE_KEY }}
+          MINISIGN_PASSWORD: ${{ secrets.MINISIGN_RELEASE_PASSWORD }}
+        run: |
+          trap 'rm -f /tmp/minisign.key' EXIT
+          echo "${MINISIGN_KEY}" > /tmp/minisign.key
+          echo "${MINISIGN_PASSWORD}" | minisign -S -s /tmp/minisign.key \
+            -t "cyberdeck release v${VERSION}" \
+            -m "cyberdeck-v${VERSION}.tar.gz"
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            cyberdeck-v${{ env.VERSION }}.tar.gz
+            cyberdeck-v${{ env.VERSION }}.tar.gz.minisig
+          generate_release_notes: true

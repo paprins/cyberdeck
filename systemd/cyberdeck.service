@@ -7,8 +7,8 @@ Wants=kiwix.service mbtileserver.service
 Type=simple
 User=pi
 Group=pi
-WorkingDirectory=/home/pi/cyberdeck
-ExecStart=/home/pi/cyberdeck/.venv/bin/uvicorn app.main:app \
+WorkingDirectory=/opt/cyberdeck/current
+ExecStart=/opt/cyberdeck/current/.venv/bin/uvicorn app.main:app \
     --host 0.0.0.0 --port 8000 --workers 1
 Restart=on-failure
 RestartSec=5
