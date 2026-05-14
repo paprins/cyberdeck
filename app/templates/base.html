@@ -14,12 +14,13 @@
     battery_pct: {{ battery_pct | tojson }},
     battery_charging: {{ battery_charging | tojson }},
     wifi_connected: {{ wifi_connected | tojson }},
+    wifi_panel_open: false,
     lastActivity: Date.now(),
     dimmed: false,
     restorePct: null,
     batteryIcon() {
       if (this.battery_charging) return 'battery_charging_full';
-      if (this.battery_pct === null) return 'battery_unknown';
+      if (this.battery_pct === null) return 'power';
       if (this.battery_pct >= 90) return 'battery_full';
       if (this.battery_pct >= 75) return 'battery_6_bar';
       if (this.battery_pct >= 60) return 'battery_5_bar';
@@ -160,11 +161,15 @@
               :class="batteryClass()"
               :title="'Battery: ' + (battery_pct ?? '?') + '%' + (battery_charging ? ' (charging)' : '')"
               x-text="batteryIcon()">battery_full</span>
-        <span class="material-symbols-outlined cursor-pointer"
-              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
-              :class="wifi_connected ? 'text-tertiary hover:text-primary' : 'text-error'"
-              :title="wifi_connected ? 'Online' : 'Offline'"
-              x-text="wifi_connected ? 'wifi' : 'wifi_off'">wifi</span>
+        <button type="button"
+                @click="wifi_panel_open = !wifi_panel_open"
+                :class="wifi_connected ? 'text-tertiary hover:text-primary' : 'text-error hover:text-primary'"
+                :title="wifi_connected ? 'Online' : 'Offline'"
+                class="leading-none">
+          <span class="material-symbols-outlined cursor-pointer"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
+                x-text="wifi_connected ? 'wifi' : 'wifi_off'">wifi</span>
+        </button>
 
         <div class="h-6 w-px bg-outline-variant/20 mx-2"></div>
 
@@ -181,6 +186,8 @@
   <div class="flex-1 flex flex-col overflow-hidden">
     {% block content %}{% endblock %}
   </div>
+
+  {% include "_wifi_panel.html" %}
 
 </body>
 </html>

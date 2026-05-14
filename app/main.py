@@ -46,6 +46,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.routers import settings as settings_router
     app.include_router(settings_router.make_router(cfg))
 
+    from app.routers import wifi as wifi_router
+    app.include_router(wifi_router.make_router(cfg))
+
     @app.get("/health")
     async def health():
         return {"status": "ok"}

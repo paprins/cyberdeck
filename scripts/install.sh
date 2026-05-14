@@ -63,6 +63,7 @@ PACKAGES=(
     linux-cpupower
     git
     curl
+    unzip
     make
     build-essential
     libssl-dev
@@ -82,14 +83,17 @@ fi
 sudo apt-get install -y "${PACKAGES[@]}"
 
 # ── mbtileserver (arm64 binary from GitHub releases) ─────
-MBTILES_VERSION="0.10.0"
+MBTILES_VERSION="0.11.0"
 MBTILES_BINARY="/usr/local/bin/mbtileserver"
 if [[ ! -f "$MBTILES_BINARY" ]]; then
     echo "Installing mbtileserver ${MBTILES_VERSION}..."
+    MBTILES_TMP="$(mktemp -d)"
     curl -fsSL \
-        "https://github.com/developmentseed/mbtileserver/releases/download/v${MBTILES_VERSION}/mbtileserver_linux_arm64" \
-        -o "$MBTILES_BINARY"
-    sudo chmod +x "$MBTILES_BINARY"
+        "https://github.com/consbio/mbtileserver/releases/download/v${MBTILES_VERSION}/mbtileserver_v${MBTILES_VERSION}_linux_arm64.zip" \
+        -o "${MBTILES_TMP}/mbtileserver.zip"
+    unzip -q "${MBTILES_TMP}/mbtileserver.zip" -d "${MBTILES_TMP}"
+    sudo install -m 0755 "${MBTILES_TMP}/mbtileserver_v${MBTILES_VERSION}_linux_arm64" "$MBTILES_BINARY"
+    rm -rf "${MBTILES_TMP}"
 fi
 
 # ── pyenv (system-wide at /opt/pyenv) ────────────────────
@@ -102,16 +106,15 @@ if [[ ! -d "${PYENV_ROOT}" ]]; then
 fi
 
 # Shell init for all users (login shells source /etc/profile.d/*.sh).
-if [[ ! -f /etc/profile.d/pyenv.sh ]]; then
-    echo "Installing /etc/profile.d/pyenv.sh..."
-    sudo tee /etc/profile.d/pyenv.sh > /dev/null << 'EOF'
+# --no-rehash because /opt/pyenv/shims is root-owned; rehash is done by sudo
+# during installs, so users don't need to write to shims at login.
+echo "Installing /etc/profile.d/pyenv.sh..."
+sudo tee /etc/profile.d/pyenv.sh > /dev/null << 'EOF'
 export PYENV_ROOT="/opt/pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init - bash)"
+eval "$(pyenv init - --no-rehash bash)"
 EOF
-    sudo chmod 0644 /etc/profile.d/pyenv.sh
-fi
-eval "$(pyenv init - bash)"
+sudo chmod 0644 /etc/profile.d/pyenv.sh
 
 # ── Python (version from .python-version) ────────────────
 cd "$REPO_DIR"
@@ -147,11 +150,16 @@ sudo mkdir -p \
     "${DATA_DIR}/maps" \
     "${DATA_DIR}/downloads" \
     "${DATA_DIR}/packages"
-sudo chown -R pi:pi "${DATA_DIR}"
+sudo chown -R "${USER}:$(id -gn)" "${DATA_DIR}"
 
 # Seed registry if missing
 if [[ ! -f "${DATA_DIR}/packages/registry.json" ]]; then
     cp "${REPO_DIR}/data/packages/registry.json" "${DATA_DIR}/packages/registry.json"
+fi
+
+# Seed static assets if missing
+if [[ ! -d "${DATA_DIR}/static" ]]; then
+    cp -r "${REPO_DIR}/data/static" "${DATA_DIR}/static"
 fi
 
 # Seed empty kiwix library if missing
@@ -165,9 +173,34 @@ fi
 
 # ── systemd services ─────────────────────────────────────
 echo "Installing systemd services..."
-sudo cp "${REPO_DIR}/systemd/"*.service /etc/systemd/system/
+SVC_USER="${USER}"
+SVC_GROUP="$(id -gn)"
+for svc in "${REPO_DIR}/systemd/"*.service; do
+    name="$(basename "$svc")"
+    sed -e "s|^User=pi$|User=${SVC_USER}|" \
+        -e "s|^Group=pi$|Group=${SVC_GROUP}|" \
+        -e "s|/home/pi/cyberdeck|${REPO_DIR}|g" \
+        "$svc" | sudo tee "/etc/systemd/system/${name}" > /dev/null
+done
 sudo systemctl daemon-reload
 sudo systemctl enable cyberdeck.service kiwix.service mbtileserver.service
 sudo systemctl start kiwix.service mbtileserver.service cyberdeck.service
+
+# ── polkit rule for wifi management ──────────────────────
+# Lets the cyberdeck service (running as $USER) drive NetworkManager via nmcli
+# without an interactive auth prompt.
+echo "Installing polkit rule for wifi management..."
+sudo install -m 0644 \
+    "${REPO_DIR}/polkit/50-cyberdeck-nm.rules" \
+    /etc/polkit-1/rules.d/50-cyberdeck-nm.rules
+
+if ! id -nG "${USER}" | tr ' ' '\n' | grep -qx netdev; then
+    echo "Adding ${USER} to netdev group..."
+    sudo usermod -aG netdev "${USER}"
+    echo "  (group change takes effect on next login or service restart)"
+fi
+
+# Restart cyberdeck so the new netdev supplementary group is in its credentials.
+sudo systemctl restart cyberdeck.service
 
 echo "=== Done. Check: sudo systemctl status cyberdeck ==="

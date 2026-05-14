@@ -1,0 +1,14 @@
+// Allow members of the 'netdev' group to manage wifi connections via
+// NetworkManager without an interactive auth prompt. Used by the cyberdeck
+// FastAPI service (which runs as a regular user) to call nmcli for the
+// wifi management UI.
+polkit.addRule(function(action, subject) {
+    var allowed = [
+        "org.freedesktop.NetworkManager.network-control",
+        "org.freedesktop.NetworkManager.settings.modify.system",
+        "org.freedesktop.NetworkManager.wifi.scan"
+    ];
+    if (allowed.indexOf(action.id) >= 0 && subject.isInGroup("netdev")) {
+        return polkit.Result.YES;
+    }
+});
