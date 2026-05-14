@@ -61,15 +61,27 @@
         this.hiddenSsid = '';
       },
       async doDisconnect() {
-        await fetch('/api/wifi/disconnect', {method: 'POST'});
+        try {
+          const r = await fetch('/api/wifi/disconnect', {method: 'POST'});
+          if (!r.ok) { this.error = 'DISCONNECT_FAILED_' + r.status; return; }
+        } catch(e) {
+          this.error = 'NETWORK_ERROR';
+          return;
+        }
         await this.load();
       },
       async doForget(ssid) {
-        await fetch('/api/wifi/forget', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({ssid: ssid}),
-        });
+        try {
+          const r = await fetch('/api/wifi/forget', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ssid: ssid}),
+          });
+          if (!r.ok) { this.error = 'FORGET_FAILED_' + r.status; return; }
+        } catch(e) {
+          this.error = 'NETWORK_ERROR';
+          return;
+        }
         await this.load();
       },
     }"
@@ -276,12 +288,8 @@
       </div>
     </div>
 
-    <div x-show="channelConflict" x-cloak
-         class="border border-primary-container/40 bg-primary-container/5 px-3 py-2 mb-4">
-      <div class="font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">AP_CHANNEL_CONFLICT</div>
-      <div class="font-body text-[10px] text-on-surface/60 mt-1">
-        Hotspot may briefly drop while connecting.
-      </div>
+    <div x-show="channelConflict" x-cloak class="font-body text-[10px] text-on-surface/40 mb-3">
+      Hotspot may briefly drop while connecting.
     </div>
 
     <div x-show="error" x-cloak class="font-headline text-[10px] tracking-[0.08em] text-error mb-3 uppercase">

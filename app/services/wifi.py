@@ -114,21 +114,22 @@ def _parse_scan(output: str, ap_ssid: str, saved: set[str]) -> tuple[str | None,
     return connected_ssid, networks
 
 
-def _raise_for_rc(rc: int, ssid: str = "") -> None:
+def _raise_for_rc(rc: int, ssid: str = "", stderr: str = "") -> None:
     """Map nmcli exit codes to typed wifi exceptions. No-op on rc=0."""
     if rc == 0:
         return
+    detail = stderr.strip() or f"exit {rc}"
     # nmcli(1) EXIT STATUS:
     #   3  timeout
     #   4  connection activation failed (commonly wrong password)
     #   10 not found
     if rc == 3:
-        raise WifiTimeoutError("connection timed out")
+        raise WifiTimeoutError(detail)
     if rc == 4:
-        raise WifiAuthError("authentication failed")
+        raise WifiAuthError(detail)
     if rc == 10:
-        raise WifiNotFoundError(f"not found: {ssid}" if ssid else "not found")
-    raise WifiError(f"nmcli failed (exit {rc})")
+        raise WifiNotFoundError(detail)
+    raise WifiError(detail)
 
 
 # ── Public API ────────────────────────────────────────────────────────────────
@@ -175,20 +176,20 @@ async def connect(req: ConnectRequest) -> None:
         args = ["--passwd-file", "/proc/self/fd/0"] + args
         stdin_bytes = f"wifi-sec.psk:{req.password}\n".encode()
 
-    rc, _, _ = await _nmcli(args, stdin_bytes=stdin_bytes)
-    _raise_for_rc(rc, req.ssid)
+    rc, _, err = await _nmcli(args, stdin_bytes=stdin_bytes)
+    _raise_for_rc(rc, req.ssid, err)
 
 
 async def disconnect() -> None:
-    rc, _, _ = await _nmcli(["device", "disconnect", _STA_IFACE])
-    _raise_for_rc(rc)
+    rc, _, err = await _nmcli(["device", "disconnect", _STA_IFACE])
+    _raise_for_rc(rc, stderr=err)
 
 
 async def forget(ssid: str) -> None:
-    rc, out, _ = await _nmcli(["-t", "-f", "NAME,TYPE", "connection", "show"])
+    rc, out, err = await _nmcli(["-t", "-f", "NAME,TYPE", "connection", "show"])
     if rc != 0:
-        raise WifiError("failed to list saved connections")
+        raise WifiError(err.strip() or "failed to list saved connections")
     if ssid not in _parse_saved(out):
         raise WifiNotFoundError(f"no saved network: {ssid}")
-    rc, _, _ = await _nmcli(["connection", "delete", ssid])
-    _raise_for_rc(rc, ssid)
+    rc, _, err = await _nmcli(["connection", "delete", ssid])
+    _raise_for_rc(rc, ssid, err)
