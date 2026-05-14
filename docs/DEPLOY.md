@@ -28,13 +28,17 @@ Optional extras:
 - A user named `pi` (the systemd units run as `pi` and expect the repo at `/home/pi/cyberdeck`).
   If you use a different user, edit the `User=`, `Group=`, and `WorkingDirectory=` lines in
   the three unit files before installing.
-- Internet access on the Pi during install (one-time, to fetch apt packages, uv, and the
-  mbtileserver binary). After install the device is offline-only.
+- Internet access on the Pi during install (one-time, to fetch apt packages, pyenv, the
+  Python source tarball, and the mbtileserver binary). After install the device is
+  offline-only.
+- **Time**: `install.sh` builds CPython from source via pyenv. Expect 15–30 minutes on a
+  Pi 4, less on a Pi 5. Subsequent runs skip the build.
 
 ## Packaging
 
-There's no build artifact — the app installs from source with `uv pip install -e .`.
-Pick whichever distribution method fits how the Pi will reach the code:
+There's no build artifact — the app installs from source with `pip install -e .` into
+a pyenv-managed venv. Pick whichever distribution method fits how the Pi will reach the
+code:
 
 ### Option A: git clone on the Pi (simplest, needs internet)
 
@@ -76,15 +80,36 @@ cd ~/cyberdeck
 
 This is idempotent — re-running is safe. It will:
 
-1. Install apt packages (`kiwix-tools`, `chromium-browser`, `python3.14`, etc.)
+1. Install apt packages: `kiwix-tools`, `chromium-browser`, and pyenv's suggested
+   build environment (`build-essential`, `libssl-dev`, `zlib1g-dev`, `libbz2-dev`,
+   `libreadline-dev`, `libsqlite3-dev`, `libncursesw5-dev`, `libffi-dev`,
+   `liblzma-dev`, `tk-dev`, `xz-utils`, `make`, `git`, `curl`)
 2. Download the mbtileserver arm64 binary to `/usr/local/bin/`
-3. Install `uv` if missing
-4. Create the venv and install the app (`uv pip install -e .`)
-5. Create `/data/{zim,maps,downloads,packages}` owned by `pi:pi`
-6. Seed `registry.json` and an empty `library.xml` if absent
-7. Install the three systemd units, enable, and start them
+3. Clone `pyenv` to `/opt/pyenv` (system-wide, root-owned) and install
+   `/etc/profile.d/pyenv.sh` so every user has `pyenv` on `$PATH` at login
+4. Build the Python version listed in `.python-version` from source via
+   `sudo pyenv install` (writes to `/opt/pyenv/versions/`)
+5. Create `.venv` using that Python and `pip install -e .` (recreates the venv if
+   its Python doesn't match `.python-version`)
+6. Create `/data/{zim,maps,downloads,packages}` owned by `pi:pi`
+7. Seed `registry.json` and an empty `library.xml` if absent
+8. Install the three systemd units, enable, and start them
 
 When it finishes, the UI is reachable on `http://<pi>:8000`.
+
+### Why pyenv is at `/opt/pyenv`
+
+Installed system-wide so Python is available to every user on the Pi, not just
+`pi`. `/opt/pyenv` is owned by `root`; reads/execs are unrestricted, writes
+(installing a new Python version, rehashing shims) require `sudo`. Project
+`.venv`s still live next to the code and are user-owned.
+
+### Bumping Python
+
+Edit `.python-version` (e.g. `3.13.12`), commit, redeploy. `install.sh` will detect
+that `.venv`'s Python doesn't match, rebuild Python via pyenv (if not already
+installed), and recreate the venv. The systemd unit always points at
+`.venv/bin/uvicorn`, so the path doesn't change.
 
 ### Headless WiFi AP (recommended for a headless Pi)
 
@@ -134,13 +159,14 @@ journalctl -u cyberdeck -f
 ssh pi@<pi>
 cd ~/cyberdeck
 git pull                       # or re-extract a fresh tarball
-uv pip install -e .            # pick up new dependencies
+.venv/bin/pip install -e .     # pick up new dependencies
 sudo systemctl restart cyberdeck
 ```
 
-Only restart `kiwix` or `mbtileserver` if their unit files changed (rare —
-their config is in `/data`, not in the repo). If the unit files themselves
-changed, re-run `./scripts/install.sh` to reinstall them.
+If `.python-version` changed, re-run `./scripts/install.sh` — it'll build the new
+Python and recreate `.venv`. Only restart `kiwix` or `mbtileserver` if their unit
+files changed (rare — their config is in `/data`, not in the repo). If the unit
+files themselves changed, re-run `./scripts/install.sh` to reinstall them.
 
 ## Uninstall
 
@@ -150,6 +176,9 @@ sudo rm /etc/systemd/system/{cyberdeck,kiwix,mbtileserver}.service
 sudo systemctl daemon-reload
 rm -rf ~/cyberdeck
 # Leave /data alone unless you really want to wipe downloaded content.
+
+# To remove pyenv as well (affects every user on the Pi):
+sudo rm -rf /opt/pyenv /etc/profile.d/pyenv.sh
 ```
 
 If you ran `setup-wifi.sh`, also:

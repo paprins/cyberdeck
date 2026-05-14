@@ -1,12 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $EUID -eq 0 ]]; then
+    echo "Error: run as a regular user (e.g. 'pi'), not root. The script uses sudo internally where needed." >&2
+    exit 1
+fi
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DATA_DIR="/data"
 
 echo "=== Cyberdeck install ==="
 
 # ── System packages ──────────────────────────────────────
+# Includes pyenv's suggested build environment for compiling CPython from source.
+# See https://github.com/pyenv/pyenv/wiki#suggested-build-environment
 echo "Installing system packages..."
 sudo apt-get update -q
 sudo apt-get install -y \
@@ -15,8 +22,20 @@ sudo apt-get install -y \
     cpufrequtils \
     chromium-browser \
     fonts-noto \
-    python3.14 \
-    python3.14-venv
+    git \
+    curl \
+    make \
+    build-essential \
+    libssl-dev \
+    zlib1g-dev \
+    libbz2-dev \
+    libreadline-dev \
+    libsqlite3-dev \
+    libncursesw5-dev \
+    libffi-dev \
+    liblzma-dev \
+    tk-dev \
+    xz-utils
 
 # ── mbtileserver (arm64 binary from GitHub releases) ─────
 MBTILES_VERSION="0.10.0"
@@ -29,18 +48,53 @@ if [[ ! -f "$MBTILES_BINARY" ]]; then
     sudo chmod +x "$MBTILES_BINARY"
 fi
 
-# ── uv ───────────────────────────────────────────────────
-if ! command -v uv &>/dev/null; then
-    echo "Installing uv..."
-    curl -LsSf https://astral.sh/uv/install.sh | sh
-    export PATH="$HOME/.cargo/bin:$PATH"
+# ── pyenv (system-wide at /opt/pyenv) ────────────────────
+# Installed root-owned so every user gets read+exec, and managed via sudo.
+export PYENV_ROOT="/opt/pyenv"
+export PATH="${PYENV_ROOT}/bin:${PATH}"
+if [[ ! -d "${PYENV_ROOT}" ]]; then
+    echo "Installing pyenv to ${PYENV_ROOT}..."
+    sudo git clone --depth 1 https://github.com/pyenv/pyenv.git "${PYENV_ROOT}"
 fi
 
-# ── Python venv ──────────────────────────────────────────
-echo "Creating Python venv..."
+# Shell init for all users (login shells source /etc/profile.d/*.sh).
+if [[ ! -f /etc/profile.d/pyenv.sh ]]; then
+    echo "Installing /etc/profile.d/pyenv.sh..."
+    sudo tee /etc/profile.d/pyenv.sh > /dev/null << 'EOF'
+export PYENV_ROOT="/opt/pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - bash)"
+EOF
+    sudo chmod 0644 /etc/profile.d/pyenv.sh
+fi
+eval "$(pyenv init - bash)"
+
+# ── Python (version from .python-version) ────────────────
 cd "$REPO_DIR"
-uv venv
-uv pip install -e .
+PYTHON_VERSION="$(cat .python-version)"
+if ! pyenv versions --bare | grep -qx "${PYTHON_VERSION}"; then
+    echo "Installing Python ${PYTHON_VERSION} via pyenv (builds from source — 15–30 min on a Pi)..."
+    # sudo strips env by default; preserve PYENV_ROOT and PATH so pyenv writes to /opt.
+    sudo env PYENV_ROOT="${PYENV_ROOT}" PATH="${PYENV_ROOT}/bin:${PATH}" \
+        pyenv install "${PYTHON_VERSION}"
+fi
+PYBIN="${PYENV_ROOT}/versions/${PYTHON_VERSION}/bin/python"
+
+# ── Project venv ─────────────────────────────────────────
+# Recreate .venv if its Python doesn't match .python-version.
+if [[ -d .venv ]]; then
+    VENV_PYVER="$(.venv/bin/python -c 'import sys; print(".".join(map(str, sys.version_info[:3])))' 2>/dev/null || echo "")"
+    if [[ "${VENV_PYVER}" != "${PYTHON_VERSION}" ]]; then
+        echo "Recreating .venv (was '${VENV_PYVER}', want '${PYTHON_VERSION}')..."
+        rm -rf .venv
+    fi
+fi
+if [[ ! -d .venv ]]; then
+    echo "Creating .venv with Python ${PYTHON_VERSION}..."
+    "${PYBIN}" -m venv .venv
+fi
+.venv/bin/pip install --upgrade pip
+.venv/bin/pip install -e .
 
 # ── Data directories ─────────────────────────────────────
 echo "Creating data directories at ${DATA_DIR}..."
