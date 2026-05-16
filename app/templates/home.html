@@ -1,9 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<main class="flex-1 overflow-hidden flex flex-col p-8"
-      x-data="{ now: Date.now() }"
-      x-init="setInterval(() => now = Date.now(), 1000)">
+<main class="flex-1 overflow-y-auto xl:overflow-hidden flex flex-col p-8">
 
   {#-- Category metadata: icon, badge, image --#}
   {%- set META = {
@@ -17,16 +15,16 @@
   } -%}
 
   {#-- Card grid --#}
-  <div class="flex-1 grid grid-cols-4 grid-rows-2 gap-4">
+  <div class="flex-1 xl:min-h-0 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 xl:grid-rows-2 gap-3">
 
     {% for card in cards %}
     {%- set cat = card.module.category -%}
     {%- set meta = META.get(cat, {'icon': 'folder', 'badge': None, 'badge_bg': '', 'badge_text': ''}) -%}
     {%- set img = card.module.image or meta.image -%}
     <a href="{{ card.url }}"
-       class="bg-surface-container flex flex-col cursor-pointer group border-b-2 border-transparent hover:bg-surface-container-high hover:border-primary">
+       class="bg-surface-container flex flex-col cursor-pointer group border-b-2 border-transparent hover:bg-surface-container-high hover:border-primary min-h-0 overflow-hidden">
       {#-- Image --#}
-      <div class="flex-1 relative overflow-hidden max-h-1/2">
+      <div class="relative overflow-hidden h-44 xl:h-auto xl:flex-1 xl:basis-1/2 xl:min-h-0">
         {% if img %}
         <img src="{{ img }}"
              alt="{{ card.module.display_name }}"
@@ -44,18 +42,18 @@
         {% endif %}
       </div>
       {#-- Info --#}
-      <div class="p-4 flex flex-col min-h-1/2">
-        <div class="flex justify-between items-start mb-2">
-          <h4 class="font-headline font-bold text-lg uppercase tracking-tight text-on-surface group-hover:text-primary leading-tight">
+      <div class="p-3 flex flex-col shrink-0 min-w-0">
+        <div class="flex justify-between items-start mb-1 gap-2">
+          <h4 class="font-headline font-bold text-base uppercase tracking-tight text-on-surface group-hover:text-primary leading-tight truncate">
             {{ card.module.display_name | replace(' ', '_') }}
           </h4>
-          <span class="material-symbols-outlined text-on-secondary-container text-xl"
+          <span class="material-symbols-outlined text-on-secondary-container text-lg shrink-0"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">{{ meta.icon }}</span>
         </div>
-        <p class="text-[11px] text-on-surface/60 font-body mb-4 leading-snug flex-1">
+        <p class="text-[11px] text-on-surface/60 font-body mb-2 leading-snug line-clamp-2">
           {{ card.module.description }}
         </p>
-        <div class="flex justify-between items-center mt-auto">
+        <div class="flex justify-between items-center">
           <span class="text-[9px] font-label text-on-surface/40 uppercase">{{ card.module.size_gb }}_GB</span>
           <span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
         </div>
@@ -65,44 +63,14 @@
 
     {#-- IMPORT_MODULE card (always last) --#}
     <a href="/settings/packages"
-       class="bg-surface-container-lowest flex flex-col items-center justify-center p-4 group hover:border-primary cursor-pointer border border-dashed border-outline-variant/30">
-      <span class="material-symbols-outlined text-4xl text-on-surface/20 group-hover:text-primary mb-2"
+       class="bg-surface-container-lowest flex flex-col items-center justify-center p-3 group hover:border-primary cursor-pointer border border-dashed border-outline-variant/30 min-h-0 overflow-hidden">
+      <span class="material-symbols-outlined text-3xl text-on-surface/20 group-hover:text-primary mb-1"
             style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">add_box</span>
       <span class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/40 group-hover:text-primary font-bold">
         IMPORT_MODULE
       </span>
     </a>
 
-  </div>
-
-  {#-- System log footer --#}
-  <div class="mt-6 bg-surface-container-lowest p-4 font-label text-[10px] flex-shrink-0 border border-outline-variant/10">
-    <div class="flex justify-between text-primary/40 mb-3 font-bold uppercase tracking-[0.2em]">
-      <span>CORE_PROCESS_LOG</span>
-      <span>TIME_UTC: <span x-text="new Date(now).toUTCString().split(' ')[4]">00:00:00</span></span>
-    </div>
-    <div class="space-y-1 opacity-70">
-      <div class="flex gap-4">
-        <span class="text-primary">[OK]</span>
-        <span class="text-on-surface/40" x-text="new Date(now-4000).toUTCString().split(' ')[4]">--:--:--</span>
-        <span>MD5_CHECKSUM_VERIFIED: CYBERDECK_V1.DB</span>
-      </div>
-      <div class="flex gap-4">
-        <span class="text-primary">[OK]</span>
-        <span class="text-on-surface/40" x-text="new Date(now-6000).toUTCString().split(' ')[4]">--:--:--</span>
-        <span>ENCRYPTION_LAYER_RE-LOCKED: SECTOR_G14</span>
-      </div>
-      <div class="flex gap-4">
-        <span class="text-tertiary-container">[INFO]</span>
-        <span class="text-on-surface/40" x-text="new Date(now-9000).toUTCString().split(' ')[4]">--:--:--</span>
-        <span>BACKGROUND_SYNC_PENDING: {% if wifi_connected %}QUEUED{% else %}LOW_SIGNAL_DENSITY{% endif %}</span>
-      </div>
-      <div class="flex gap-4 animate-pulse">
-        <span class="text-primary-container">[WARN]</span>
-        <span class="text-on-surface/40" x-text="new Date(now-13000).toUTCString().split(' ')[4]">--:--:--</span>
-        <span>LOW_VOLTAGE_DETECTED: AUX_BANK_03</span>
-      </div>
-    </div>
   </div>
 
 </main>

@@ -1,10 +1,12 @@
 from __future__ import annotations
+import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from app.config import Settings
+from app.services.notifications import services_probe_loop
 from app.services.registry import load_registry
 from app.services.packages import init_kiwix_library
 
@@ -20,7 +22,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             d.mkdir(parents=True, exist_ok=True)
         init_kiwix_library(cfg)
         app.state.settings = cfg
-        yield
+        probe_task = asyncio.create_task(services_probe_loop(cfg))
+        try:
+            yield
+        finally:
+            probe_task.cancel()
+            try:
+                await probe_task
+            except asyncio.CancelledError:
+                pass
 
     app = FastAPI(title="Cyberdeck", lifespan=lifespan)
 
@@ -52,6 +62,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     from app.routers import upgrade as upgrade_router
     app.include_router(upgrade_router.make_router(cfg))
 
+    from app.routers import libraries as libraries_router
+    app.include_router(libraries_router.make_router(cfg))
+
     @app.get("/health")
     async def health():
         from app.services.upgrade import current_version
@@ -74,6 +87,15 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @app.exception_handler(404)
     async def not_found(request, exc):
         return JSONResponse({"error": "not found"}, status_code=404)
+
+    from app.services.system import SystemCommandError
+
+    @app.exception_handler(SystemCommandError)
+    async def system_command_error(request, exc: SystemCommandError):
+        return JSONResponse(
+            {"detail": str(exc)},
+            status_code=503 if exc.unsupported else 500,
+        )
 
     return app
 

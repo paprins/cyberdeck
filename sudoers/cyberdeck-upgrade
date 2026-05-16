@@ -1,3 +1,5 @@
-# Allows the cyberdeck service user to restart its own unit during an upgrade.
-# install.sh substitutes 'pi' with the actual run-as user.
+# Allows the cyberdeck service user to manage its own unit, restart content
+# services, and trigger reboot/poweroff. install.sh substitutes 'pi' with the
+# actual run-as user.
 pi ALL=(root) NOPASSWD: /bin/systemctl restart cyberdeck.service
+pi ALL=(root) NOPASSWD: /bin/systemctl restart kiwix.service, /bin/systemctl restart mbtileserver.service, /bin/systemctl --no-block reboot, /bin/systemctl --no-block poweroff

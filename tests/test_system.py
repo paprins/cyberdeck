@@ -30,6 +30,31 @@ async def test_system_endpoint_returns_all_keys(client):
     assert "wifi_connected" in data
     assert "updates_available" in data
     assert "uptime_s" in data
+    assert "notifications" in data
+
+
+async def test_system_endpoint_notifications_shape(client):
+    r = await client.get("/api/system")
+    n = r.json()["notifications"]
+    for key in (
+        "check_for_updates", "wifi_connected", "package_updates",
+        "downloads", "services", "firmware_update_available",
+        "upgrade_phase", "upgrade_target_version",
+    ):
+        assert key in n
+    assert isinstance(n["package_updates"], list)
+    assert isinstance(n["downloads"], dict)
+    assert isinstance(n["services"], list)
+
+
+async def test_check_for_updates_patch_persists(client, tmp_settings):
+    from app.services.notifications import effective_check_for_updates
+    assert effective_check_for_updates(tmp_settings) is True
+    r = await client.post(
+        "/api/settings/check-for-updates", json={"enabled": False},
+    )
+    assert r.status_code == 204
+    assert effective_check_for_updates(tmp_settings) is False
 
 
 async def test_system_battery_pct_is_int_or_none(client):
@@ -135,6 +160,55 @@ def test_write_brightness_noop_when_no_device(tmp_path):
     sys_svc.write_brightness(50, _root=tmp_path)  # must not raise
 
 
+# ── read_loadavg ──────────────────────────────────────────────────────────────
+
+def test_read_loadavg_parses_first_two(tmp_path):
+    p = tmp_path / "loadavg"
+    p.write_text("0.42 0.35 0.28 1/123 4567\n")
+    assert sys_svc.read_loadavg(_path=p) == (0.42, 0.35)
+
+
+def test_read_loadavg_returns_none_when_missing(tmp_path):
+    assert sys_svc.read_loadavg(_path=tmp_path / "nope") is None
+
+
+def test_read_loadavg_returns_none_when_malformed(tmp_path):
+    p = tmp_path / "loadavg"
+    p.write_text("nonsense\n")
+    assert sys_svc.read_loadavg(_path=p) is None
+
+
+# ── read_meminfo ──────────────────────────────────────────────────────────────
+
+def test_read_meminfo_parses_total_and_available(tmp_path):
+    p = tmp_path / "meminfo"
+    p.write_text("MemTotal:        7945000 kB\nMemFree:         123 kB\nMemAvailable:    6500000 kB\n")
+    assert sys_svc.read_meminfo(_path=p) == (7945000, 6500000)
+
+
+def test_read_meminfo_returns_none_when_missing(tmp_path):
+    assert sys_svc.read_meminfo(_path=tmp_path / "nope") is None
+
+
+def test_read_meminfo_returns_none_when_keys_absent(tmp_path):
+    p = tmp_path / "meminfo"
+    p.write_text("SomethingElse: 1 kB\n")
+    assert sys_svc.read_meminfo(_path=p) is None
+
+
+# ── read_temp_c ───────────────────────────────────────────────────────────────
+
+def test_read_temp_c_converts_millidegrees(tmp_path):
+    zone = tmp_path / "thermal_zone0"
+    zone.mkdir()
+    (zone / "temp").write_text("45123\n")
+    assert sys_svc.read_temp_c(_root=tmp_path) == 45.123
+
+
+def test_read_temp_c_returns_none_when_no_zone(tmp_path):
+    assert sys_svc.read_temp_c(_root=tmp_path) is None
+
+
 # ── GET /api/system/brightness ────────────────────────────────────────────────
 
 async def test_get_brightness_returns_pct(client, monkeypatch):
@@ -169,3 +243,122 @@ async def test_post_brightness_rejects_out_of_range(client):
 async def test_post_brightness_rejects_negative(client):
     r = await client.post("/api/system/brightness", json={"level": -1})
     assert r.status_code == 422
+
+
+# ── Power: service ────────────────────────────────────────────────────────────
+
+async def test_restart_services_invokes_both_units(monkeypatch):
+    calls: list[tuple[str, ...]] = []
+
+    async def fake(*args, timeout=30.0):
+        calls.append(args)
+
+    monkeypatch.setattr(sys_svc, "_systemctl", fake)
+    await sys_svc.restart_services()
+    assert calls == [("restart", "kiwix.service"), ("restart", "mbtileserver.service")]
+
+
+async def test_reboot_uses_no_block(monkeypatch):
+    calls: list[tuple[str, ...]] = []
+
+    async def fake(*args, timeout=30.0):
+        calls.append(args)
+
+    monkeypatch.setattr(sys_svc, "_systemctl", fake)
+    await sys_svc.reboot()
+    assert calls == [("--no-block", "reboot")]
+
+
+async def test_poweroff_uses_no_block(monkeypatch):
+    calls: list[tuple[str, ...]] = []
+
+    async def fake(*args, timeout=30.0):
+        calls.append(args)
+
+    monkeypatch.setattr(sys_svc, "_systemctl", fake)
+    await sys_svc.poweroff()
+    assert calls == [("--no-block", "poweroff")]
+
+
+async def test_systemctl_raises_unsupported_when_sudo_missing(monkeypatch):
+    async def fake_exec(*args, **kwargs):
+        raise FileNotFoundError("sudo")
+
+    monkeypatch.setattr(sys_svc.asyncio, "create_subprocess_exec", fake_exec)
+    with pytest.raises(sys_svc.SystemCommandError) as exc_info:
+        await sys_svc._systemctl("restart", "kiwix.service")
+    assert exc_info.value.unsupported is True
+
+
+async def test_systemctl_marks_password_error_as_unsupported(monkeypatch):
+    class FakeProc:
+        returncode = 1
+
+        async def communicate(self):
+            return b"", b"sudo: a password is required"
+
+    async def fake_exec(*args, **kwargs):
+        return FakeProc()
+
+    monkeypatch.setattr(sys_svc.asyncio, "create_subprocess_exec", fake_exec)
+    with pytest.raises(sys_svc.SystemCommandError) as exc_info:
+        await sys_svc._systemctl("restart", "kiwix.service")
+    assert exc_info.value.unsupported is True
+
+
+async def test_systemctl_other_failure_is_general_error(monkeypatch):
+    class FakeProc:
+        returncode = 5
+
+        async def communicate(self):
+            return b"", b"Failed to restart kiwix.service: Unit not found."
+
+    async def fake_exec(*args, **kwargs):
+        return FakeProc()
+
+    monkeypatch.setattr(sys_svc.asyncio, "create_subprocess_exec", fake_exec)
+    with pytest.raises(sys_svc.SystemCommandError) as exc_info:
+        await sys_svc._systemctl("restart", "kiwix.service")
+    assert exc_info.value.unsupported is False
+    assert "Unit not found" in str(exc_info.value)
+
+
+# ── Power: HTTP endpoints ─────────────────────────────────────────────────────
+
+async def test_post_restart_services_returns_204(client, monkeypatch):
+    async def ok(): return None
+    monkeypatch.setattr(sys_svc, "restart_services", ok)
+    r = await client.post("/api/system/restart-services")
+    assert r.status_code == 204
+
+
+async def test_post_reboot_returns_202(client, monkeypatch):
+    async def ok(): return None
+    monkeypatch.setattr(sys_svc, "reboot", ok)
+    r = await client.post("/api/system/reboot")
+    assert r.status_code == 202
+
+
+async def test_post_shutdown_returns_202(client, monkeypatch):
+    async def ok(): return None
+    monkeypatch.setattr(sys_svc, "poweroff", ok)
+    r = await client.post("/api/system/shutdown")
+    assert r.status_code == 202
+
+
+async def test_post_reboot_returns_503_when_unsupported(client, monkeypatch):
+    async def boom():
+        raise sys_svc.SystemCommandError("sudo not available", unsupported=True)
+    monkeypatch.setattr(sys_svc, "reboot", boom)
+    r = await client.post("/api/system/reboot")
+    assert r.status_code == 503
+    assert "sudo" in r.json()["detail"]
+
+
+async def test_post_restart_services_returns_500_on_error(client, monkeypatch):
+    async def boom():
+        raise sys_svc.SystemCommandError("Unit not found.")
+    monkeypatch.setattr(sys_svc, "restart_services", boom)
+    r = await client.post("/api/system/restart-services")
+    assert r.status_code == 500
+    assert "Unit not found" in r.json()["detail"]

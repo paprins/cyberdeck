@@ -2,6 +2,8 @@ from __future__ import annotations
 from typing import Optional
 from pydantic import BaseModel, computed_field
 
+from app.models.library import Library
+
 
 class Module(BaseModel):
     id: str
@@ -16,6 +18,7 @@ class Module(BaseModel):
     download_url: Optional[str] = None
     active: bool = False
     image: Optional[str] = None
+    source_library_id: Optional[str] = None
 
     @computed_field
     @property
@@ -33,3 +36,4 @@ class Module(BaseModel):
 class Registry(BaseModel):
     update_server: str
     modules: list[Module] = []
+    libraries: list[Library] = []

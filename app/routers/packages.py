@@ -6,6 +6,7 @@ import httpx
 from app.config import Settings
 from app.services.packages import (
     _active_tasks,
+    _pending,
     accept_checksum_mismatch,
     activate_module,
     cancel_download,
@@ -57,13 +58,13 @@ def make_router(cfg: Settings) -> APIRouter:
             return JSONResponse({"error": "not found"}, status_code=404)
         try:
             await start_download(module, cfg)
-        except RuntimeError as e:
-            return JSONResponse({"error": str(e)}, status_code=409)
+        except ValueError as e:
+            return JSONResponse({"error": str(e)}, status_code=400)
         return Response(status_code=202)
 
     @router.post("/api/packages/{module_id}/cancel")
     async def cancel(module_id: str):
-        if module_id not in _active_tasks:
+        if module_id not in _active_tasks and module_id not in _pending:
             return JSONResponse({"error": "not downloading"}, status_code=404)
         await cancel_download(module_id)
         return Response(status_code=204)

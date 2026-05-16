@@ -41,8 +41,10 @@ def _seed(tmp_settings, modules=None):
 @pytest.fixture(autouse=True)
 def clear_active_tasks():
     pkg_service._active_tasks.clear()
+    pkg_service._pending.clear()
     yield
     pkg_service._active_tasks.clear()
+    pkg_service._pending.clear()
 
 
 # ── get_download_status ───────────────────────────────────────────────────────
@@ -245,12 +247,22 @@ async def test_deactivate_sets_active_false(tmp_settings, monkeypatch):
 
 # ── start_download ────────────────────────────────────────────────────────────
 
-async def test_start_download_raises_if_already_active(tmp_settings):
+async def test_start_download_queues_when_busy(tmp_settings):
     m = _mod()
     _seed(tmp_settings, [m])
     pkg_service._active_tasks["other-module"] = object()
-    with pytest.raises(RuntimeError, match="already active"):
-        await pkg_service.start_download(m, tmp_settings)
+    await pkg_service.start_download(m, tmp_settings)
+    assert "medical-wikimed" in pkg_service._pending
+    assert "medical-wikimed" not in pkg_service._active_tasks
+
+
+async def test_start_download_idempotent_when_already_queued(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    pkg_service._active_tasks["other-module"] = object()
+    await pkg_service.start_download(m, tmp_settings)
+    await pkg_service.start_download(m, tmp_settings)
+    assert pkg_service._pending.count("medical-wikimed") == 1
 
 
 async def test_start_download_raises_if_no_url(tmp_settings):
@@ -258,6 +270,80 @@ async def test_start_download_raises_if_no_url(tmp_settings):
     _seed(tmp_settings, [m])
     with pytest.raises(ValueError, match="no download_url"):
         await pkg_service.start_download(m, tmp_settings)
+
+
+def test_get_download_status_returns_queued(tmp_settings):
+    m = _mod()
+    pkg_service._pending.append("medical-wikimed")
+    result = pkg_service.get_download_status(m, tmp_settings)
+    assert result["status"] == "queued"
+
+
+async def test_cancel_queued_removes_from_pending(tmp_settings):
+    pkg_service._pending.append("medical-wikimed")
+    await pkg_service.cancel_download("medical-wikimed")
+    assert "medical-wikimed" not in pkg_service._pending
+
+
+async def test_drain_pending_starts_next_after_completion(tmp_settings, monkeypatch):
+    """When the active download finishes, the next pending module starts automatically."""
+    import hashlib
+    fake_bytes = b"second module content"
+    correct_checksum = "sha256:" + hashlib.sha256(fake_bytes).hexdigest()
+
+    first = _mod(id="first-module", checksum="sha256:irrelevant")
+    second = _mod(id="second-module", checksum=correct_checksum,
+                  download_url="https://example.com/second.zim")
+    _seed(tmp_settings, [first, second])
+    tmp_settings.downloads_dir.mkdir(parents=True, exist_ok=True)
+
+    started: list[str] = []
+
+    class _Resp:
+        status_code = 200
+        headers = {"Content-Length": str(len(fake_bytes))}
+        def raise_for_status(self): pass
+        async def aiter_bytes(self, chunk_size):
+            yield fake_bytes
+
+    class _Stream:
+        async def __aenter__(self): return _Resp()
+        async def __aexit__(self, *a): pass
+
+    class _Client:
+        def __init__(self, **_): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        def stream(self, method, url, headers=None, timeout=None):
+            started.append(url)
+            return _Stream()
+
+    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _Client)
+    monkeypatch.setattr(pkg_service, "_kiwix_add", lambda *a: None)
+    monkeypatch.setattr(pkg_service, "_signal_service", lambda *a: None)
+
+    # Simulate: first is already active, second gets queued
+    pkg_service._active_tasks["first-module"] = object()
+    await pkg_service.start_download(second, tmp_settings)
+    assert "second-module" in pkg_service._pending
+
+    # First "completes": clear it and call _drain_pending directly
+    pkg_service._active_tasks.pop("first-module")
+    pkg_service._drain_pending(tmp_settings)
+    assert "second-module" in pkg_service._active_tasks
+    assert "second-module" not in pkg_service._pending
+    # Let the actual download task run to completion
+    task = pkg_service._active_tasks["second-module"]
+    await task
+    assert started == ["https://example.com/second.zim"]
+
+
+async def test_uninstall_module_removes_from_pending(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    pkg_service._pending.append("medical-wikimed")
+    await pkg_service.uninstall_module(m, tmp_settings)
+    assert "medical-wikimed" not in pkg_service._pending
 
 
 async def test_download_writes_mismatch_file_on_checksum_failure(tmp_settings, monkeypatch):
@@ -269,6 +355,7 @@ async def test_download_writes_mismatch_file_on_checksum_failure(tmp_settings, m
 
     class _Resp:
         status_code = 200
+        headers = {"Content-Length": str(len(fake_bytes))}
         def raise_for_status(self): pass
         async def aiter_bytes(self, chunk_size):
             yield fake_bytes
@@ -311,6 +398,7 @@ async def test_download_does_not_write_mismatch_on_correct_checksum(tmp_settings
 
     class _Resp:
         status_code = 200
+        headers = {"Content-Length": str(len(fake_bytes))}
         def raise_for_status(self): pass
         async def aiter_bytes(self, chunk_size):
             yield fake_bytes
@@ -494,12 +582,22 @@ async def test_install_returns_404_for_unknown_module(client, tmp_settings):
     assert r.status_code == 404
 
 
-async def test_install_returns_409_when_download_active(client, tmp_settings):
+async def test_install_returns_202_and_queues_when_download_active(client, tmp_settings):
     m = _mod()
     _seed(tmp_settings, [m])
     pkg_service._active_tasks["other"] = object()
     r = await client.post("/api/packages/medical-wikimed/install")
-    assert r.status_code == 409
+    assert r.status_code == 202
+    assert "medical-wikimed" in pkg_service._pending
+
+
+async def test_cancel_endpoint_handles_queued(client, tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    pkg_service._pending.append("medical-wikimed")
+    r = await client.post("/api/packages/medical-wikimed/cancel")
+    assert r.status_code == 204
+    assert "medical-wikimed" not in pkg_service._pending
 
 
 # ── POST /api/packages/{id}/cancel ───────────────────────────────────────────
@@ -689,3 +787,67 @@ def test_kiwix_add_logs_warning_when_zim_missing(tmp_settings, monkeypatch, capl
     with caplog.at_level(logging.WARNING, logger="app.services.packages"):
         pkg_service._kiwix_add(m, tmp_settings)
     assert any("not found" in r.message for r in caplog.records)
+
+
+# ── .total sidecar: total-size fallback ───────────────────────────────────────
+
+class _FakeResp:
+    def __init__(self, status_code: int, headers: dict[str, str]):
+        self.status_code = status_code
+        self.headers = headers
+
+
+def test_parse_total_from_response_uses_content_length_on_200():
+    r = _FakeResp(200, {"Content-Length": "12345"})
+    assert pkg_service._parse_total_from_response(r) == 12345
+
+
+def test_parse_total_from_response_parses_content_range_on_206():
+    r = _FakeResp(206, {"Content-Range": "bytes 100-199/5000"})
+    assert pkg_service._parse_total_from_response(r) == 5000
+
+
+def test_parse_total_from_response_returns_none_when_total_unknown():
+    r_206_star = _FakeResp(206, {"Content-Range": "bytes 0-99/*"})
+    r_200_no_cl = _FakeResp(200, {})
+    assert pkg_service._parse_total_from_response(r_206_star) is None
+    assert pkg_service._parse_total_from_response(r_200_no_cl) is None
+
+
+def test_get_download_status_prefers_sidecar_over_size_gb(tmp_settings):
+    m = _mod(size_gb=0.0)
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"x" * 500)
+    (tmp_settings.downloads_dir / "medical-wikimed.total").write_text("2000")
+    pkg_service._active_tasks["medical-wikimed"] = object()
+    result = pkg_service.get_download_status(m, tmp_settings)
+    assert result["total_bytes"] == 2000
+    assert result["pct"] == 25  # 500 / 2000
+
+
+def test_get_download_status_falls_back_to_size_gb_without_sidecar(tmp_settings):
+    m = _mod(size_gb=1.0)  # 1 GB
+    part = tmp_settings.downloads_dir / "medical-wikimed.part"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    part.write_bytes(b"x" * 500)
+    pkg_service._active_tasks["medical-wikimed"] = object()
+    result = pkg_service.get_download_status(m, tmp_settings)
+    assert result["total_bytes"] == 1024 ** 3
+
+
+async def test_uninstall_removes_total_sidecar(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, modules=[m])
+    (tmp_settings.downloads_dir).mkdir(parents=True, exist_ok=True)
+    (tmp_settings.downloads_dir / "medical-wikimed.total").write_text("12345")
+    await pkg_service.uninstall_module(m, tmp_settings)
+    assert not (tmp_settings.downloads_dir / "medical-wikimed.total").exists()
+
+
+async def test_discard_checksum_mismatch_removes_total_sidecar(tmp_settings):
+    m = _mod()
+    (tmp_settings.downloads_dir).mkdir(parents=True, exist_ok=True)
+    (tmp_settings.downloads_dir / "medical-wikimed.total").write_text("12345")
+    await pkg_service.discard_checksum_mismatch(m, tmp_settings)
+    assert not (tmp_settings.downloads_dir / "medical-wikimed.total").exists()

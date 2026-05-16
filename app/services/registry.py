@@ -1,6 +1,12 @@
 from __future__ import annotations
-from typing import Any
+import uuid
+from typing import Any, Optional
 from app.config import Settings
+from app.models.library import (
+    Library,
+    LibraryAlreadyExistsError,
+    LibraryNotFoundError,
+)
 from app.models.registry import Module, Registry
 
 _DEFAULT_UPDATE_SERVER = "https://updates.example.com/cyberdeck/manifest.json"
@@ -56,4 +62,50 @@ def merge_remote_manifest(
         else:
             existing[module_id] = Module(**remote)
     registry.modules = list(existing.values())
+    save_registry(settings, registry)
+
+
+def list_libraries(settings: Settings) -> list[Library]:
+    return load_registry(settings).libraries
+
+
+def add_library(
+    settings: Settings,
+    url: str,
+    display_name: str,
+    lang: Optional[str] = None,
+) -> Library:
+    from app.services.libraries import normalize_opds_url
+    canonical_url, lang_from_url = normalize_opds_url(url)
+    registry = load_registry(settings)
+    for existing in registry.libraries:
+        if existing.url == canonical_url:
+            raise LibraryAlreadyExistsError(f"library already exists: {canonical_url}")
+    library = Library(
+        id=uuid.uuid4().hex,
+        display_name=display_name,
+        url=canonical_url,
+        lang=lang or lang_from_url,
+    )
+    registry.libraries.append(library)
+    save_registry(settings, registry)
+    return library
+
+
+def remove_library(settings: Settings, library_id: str) -> None:
+    """Remove a library; prune Available modules from it, clear source on Installed."""
+    registry = load_registry(settings)
+    if not any(lib.id == library_id for lib in registry.libraries):
+        raise LibraryNotFoundError(library_id)
+
+    kept_modules: list[Module] = []
+    for m in registry.modules:
+        if m.source_library_id != library_id:
+            kept_modules.append(m)
+            continue
+        if m.is_installed:
+            m.source_library_id = None
+            kept_modules.append(m)
+    registry.modules = kept_modules
+    registry.libraries = [lib for lib in registry.libraries if lib.id != library_id]
     save_registry(settings, registry)

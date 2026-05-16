@@ -15,6 +15,7 @@ from app.services.registry import load_registry, save_registry, merge_remote_man
 log = logging.getLogger(__name__)
 
 _active_tasks: dict[str, asyncio.Task] = {}
+_pending: list[str] = []
 
 
 # ── Path helpers ──────────────────────────────────────────────────────────────
@@ -33,10 +34,44 @@ def _mismatch_path(module: Module, settings: Settings) -> Path:
     return settings.downloads_dir / f"{module.id}.mismatch"
 
 
+def _total_path(module: Module, settings: Settings) -> Path:
+    """Sidecar holding the real download total in bytes, captured from the
+    HTTP response. Authoritative when present — overrides registry size_gb."""
+    return settings.downloads_dir / f"{module.id}.total"
+
+
+def _read_total_sidecar(module: Module, settings: Settings) -> int | None:
+    p = _total_path(module, settings)
+    if not p.exists():
+        return None
+    try:
+        v = int(p.read_text().strip())
+        return v if v > 0 else None
+    except (OSError, ValueError):
+        return None
+
+
+def _parse_total_from_response(r: "httpx.Response") -> int | None:
+    """Derive total file size from response headers. Returns None if unknown."""
+    if r.status_code == 206:
+        # Content-Range: bytes <start>-<end>/<total>   (total may be '*')
+        cr = r.headers.get("Content-Range")
+        if cr and "/" in cr:
+            tail = cr.rsplit("/", 1)[1].strip()
+            if tail.isdigit():
+                return int(tail)
+        return None
+    if r.status_code == 200:
+        cl = r.headers.get("Content-Length")
+        if cl and cl.isdigit():
+            return int(cl)
+    return None
+
+
 # ── Status and storage ────────────────────────────────────────────────────────
 
 def get_download_status(module: Module, settings: Settings) -> dict:
-    total_bytes = int(module.size_gb * 1024 ** 3)
+    total_bytes = _read_total_sidecar(module, settings) or int(module.size_gb * 1024 ** 3)
     part = _part_path(module, settings)
     final = _final_path(module, settings)
 
@@ -68,6 +103,14 @@ def get_download_status(module: Module, settings: Settings) -> dict:
             "bytes_downloaded": bytes_downloaded,
             "total_bytes": total_bytes,
             "pct": pct,
+        }
+
+    if module.id in _pending:
+        return {
+            "status": "queued",
+            "bytes_downloaded": 0,
+            "total_bytes": total_bytes,
+            "pct": 0,
         }
 
     if part.exists():
@@ -104,6 +147,7 @@ async def uninstall_module(module: Module, settings: Settings) -> None:
         mismatch.unlink()
     if final.exists():
         final.unlink()
+    _total_path(module, settings).unlink(missing_ok=True)
     if module.category != "maps":
         _kiwix_remove(module, settings)
     _signal_service(module)
@@ -159,6 +203,7 @@ async def accept_checksum_mismatch(module: Module, settings: Settings) -> None:
 async def discard_checksum_mismatch(module: Module, settings: Settings) -> None:
     _part_path(module, settings).unlink(missing_ok=True)
     _mismatch_path(module, settings).unlink(missing_ok=True)
+    _total_path(module, settings).unlink(missing_ok=True)
 
 
 # ── Kiwix library.xml management ──────────────────────────────────────────────
@@ -233,6 +278,9 @@ def _run(cmd: list[str]) -> None:
 # ── cancel_download (needed by uninstall) ─────────────────────────────────────
 
 async def cancel_download(module_id: str) -> None:
+    if module_id in _pending:
+        _pending.remove(module_id)
+        return
     task = _active_tasks.get(module_id)
     if task and not task.done():
         task.cancel()
@@ -246,12 +294,30 @@ async def cancel_download(module_id: str) -> None:
 # ── start_download / check_for_updates ───────────────────────────────────────
 
 async def start_download(module: Module, settings: Settings) -> None:
-    if _active_tasks:
-        raise RuntimeError("A download is already active")
     if not module.download_url:
         raise ValueError(f"Module {module.id} has no download_url")
+    if module.id in _active_tasks or module.id in _pending:
+        return
+    if _active_tasks:
+        _pending.append(module.id)
+        return
     task = asyncio.create_task(_download_task(module, settings))
     _active_tasks[module.id] = task
+
+
+def _drain_pending(settings: Settings) -> None:
+    """Start the next pending download. No-op if one is active or the queue is empty."""
+    if _active_tasks:
+        return
+    while _pending:
+        next_id = _pending.pop(0)
+        registry = load_registry(settings)
+        module = next((m for m in registry.modules if m.id == next_id), None)
+        if module is None or not module.download_url:
+            continue
+        task = asyncio.create_task(_download_task(module, settings))
+        _active_tasks[module.id] = task
+        return
 
 
 async def check_for_updates(settings: Settings) -> int:
@@ -285,6 +351,9 @@ async def _download_task(module: Module, settings: Settings) -> None:
                     part.unlink(missing_ok=True)
                     part.parent.mkdir(parents=True, exist_ok=True)
                     offset = 0
+                total = _parse_total_from_response(r)
+                if total:
+                    _total_path(module, settings).write_text(str(total))
                 with part.open("ab") as f:
                     async for chunk in r.aiter_bytes(65536):
                         f.write(chunk)
@@ -305,6 +374,7 @@ async def _download_task(module: Module, settings: Settings) -> None:
         final = _final_path(module, settings)
         final.parent.mkdir(parents=True, exist_ok=True)
         part.rename(final)
+        _total_path(module, settings).unlink(missing_ok=True)
 
         registry = load_registry(settings)
         for m in registry.modules:
@@ -325,3 +395,4 @@ async def _download_task(module: Module, settings: Settings) -> None:
         log.exception("Download failed for %s", module.id)
     finally:
         _active_tasks.pop(module.id, None)
+        _drain_pending(settings)

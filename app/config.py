@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     install_root: Path = Path("/opt/cyberdeck")
     github_repo: str = ""
     upgrade_versions_keep: int = 3
+    check_for_updates: bool = True
 
     model_config = SettingsConfigDict(env_prefix="CYBERDECK_")
 
@@ -40,3 +41,7 @@ class Settings(BaseSettings):
     @property
     def current_symlink(self) -> Path:
         return self.install_root / "current"
+
+    @property
+    def preferences_path(self) -> Path:
+        return self.data_dir / "preferences.json"

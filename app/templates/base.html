@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="/static/css/app.css">
   <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
   <script defer src="/static/js/alpine.min.js"></script>
+  <script defer src="/static/js/toasts.js"></script>
 </head>
 <body
   class="bg-surface text-on-surface font-body h-full overflow-hidden flex flex-col"
@@ -36,12 +37,16 @@
       return 'text-on-surface/70 cursor-pointer hover:text-primary';
     },
     async poll() {
+      if (this.dimmed) return;
       try {
         const r = await fetch('/api/system');
         const d = await r.json();
         this.battery_pct = d.battery_pct;
         this.battery_charging = d.battery_charging;
         this.wifi_connected = d.wifi_connected;
+        if (d.notifications) {
+          window.dispatchEvent(new CustomEvent('notifications-update', { detail: d.notifications }));
+        }
       } catch(e) {}
     },
     async initBrightness() {
@@ -152,7 +157,7 @@
 
       <!-- System icons -->
       <div class="flex items-center gap-4 text-on-surface/70">
-        <a href="/settings" title="Settings" class="hover:text-primary">
+        <a href="/settings" title="Settings" class="flex items-center hover:text-primary">
           <span class="material-symbols-outlined cursor-pointer"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">settings</span>
         </a>
@@ -163,7 +168,7 @@
               x-text="batteryIcon()">battery_full</span>
         <button type="button"
                 @click="wifi_panel_open = !wifi_panel_open"
-                :class="wifi_connected ? 'text-tertiary hover:text-primary' : 'text-error hover:text-primary'"
+                :class="wifi_connected ? 'text-tertiary hover:text-primary' : 'hover:text-primary'"
                 :title="wifi_connected ? 'Online' : 'Offline'"
                 class="leading-none">
           <span class="material-symbols-outlined cursor-pointer"
@@ -171,13 +176,7 @@
                 x-text="wifi_connected ? 'wifi' : 'wifi_off'">wifi</span>
         </button>
 
-        <div class="h-6 w-px bg-outline-variant/20 mx-2"></div>
-
-        <!-- Shutdown -->
-        <button class="flex items-center gap-2 text-error px-3 py-1.5 font-label text-xs tracking-widest uppercase border border-error/20">
-          <span class="material-symbols-outlined text-sm" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">power_settings_new</span>
-          SHUTDOWN
-        </button>
+        {% include "_power_menu.html" %}
       </div>
     </div>
   </header>
@@ -188,6 +187,7 @@
   </div>
 
   {% include "_wifi_panel.html" %}
+  {% include "_toasts.html" %}
 
 </body>
 </html>

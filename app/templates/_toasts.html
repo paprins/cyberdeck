@@ -1,0 +1,74 @@
+<div
+  x-data="{
+    toasts: [],
+    _seq: 0,
+    _durations: { info: 6000, success: 6000, warning: 12000, error: null },
+    add(t) {
+      const id = ++this._seq;
+      this.toasts.push({ id, ...t });
+      const dur = this._durations[t.severity];
+      if (dur) setTimeout(() => this.dismiss(id), dur);
+    },
+    dismiss(id) {
+      this.toasts = this.toasts.filter(t => t.id !== id);
+    },
+    severityClasses(s) {
+      if (s === 'success') return 'border-tertiary/60 text-tertiary';
+      if (s === 'warning') return 'border-primary-container/70 text-primary-container animate-pulse';
+      if (s === 'error')   return 'border-error/70 text-error';
+      return 'border-tertiary-container/70 text-tertiary-container';
+    },
+    severityTag(s) {
+      if (s === 'success') return '[OK]';
+      if (s === 'warning') return '[WARN]';
+      if (s === 'error')   return '[CRIT]';
+      return '[INFO]';
+    },
+    severityIcon(s) {
+      if (s === 'success') return 'check_circle';
+      if (s === 'warning') return 'warning';
+      if (s === 'error')   return 'error';
+      return 'info';
+    }
+  }"
+  @toast.window="add($event.detail)"
+  class="fixed bottom-4 right-4 z-[70] flex flex-col gap-2 w-[360px] pointer-events-none"
+  aria-live="polite"
+  aria-atomic="false"
+>
+  <template x-for="t in toasts" :key="t.id">
+    <div
+      class="pointer-events-auto bg-surface-container-lowest border-l-2 border-y border-r border-y-outline-variant/30 border-r-outline-variant/30 px-3 py-[10px] flex items-start gap-3"
+      :class="severityClasses(t.severity)"
+      role="status"
+    >
+      <span class="material-symbols-outlined text-[18px] flex-shrink-0 leading-none mt-[1px]"
+            style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
+            x-text="severityIcon(t.severity)"></span>
+
+      <div class="flex-1 min-w-0">
+        <div class="flex items-baseline gap-2">
+          <span class="font-label text-[9px] font-bold tracking-[0.16em]" x-text="severityTag(t.severity)"></span>
+          <span class="font-headline text-[10px] font-bold tracking-[0.08em] uppercase text-on-surface truncate" x-text="t.title"></span>
+        </div>
+        <div class="font-body text-[11px] text-on-surface/70 mt-[2px] break-words" x-text="t.message"></div>
+        <template x-if="t.href">
+          <a :href="t.href"
+             @click="dismiss(t.id)"
+             class="inline-block mt-[6px] font-headline text-[9px] font-bold tracking-[0.12em] uppercase text-on-surface/60 hover:text-on-surface">
+            → OPEN
+          </a>
+        </template>
+      </div>
+
+      <button
+        @click="dismiss(t.id)"
+        aria-label="Dismiss"
+        class="flex-shrink-0 leading-none text-on-surface/40 hover:text-on-surface"
+      >
+        <span class="material-symbols-outlined text-[16px]"
+              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">close</span>
+      </button>
+    </div>
+  </template>
+</div>
