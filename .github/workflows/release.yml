@@ -12,7 +12,7 @@ jobs:
     permissions:
       contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set version from tag
         run: echo "VERSION=${GITHUB_REF_NAME#v}" >> "$GITHUB_ENV"
@@ -21,7 +21,7 @@ jobs:
         run: sed -i "s/^version = .*/version = \"${VERSION}\"/" pyproject.toml
 
       - name: Set up Python 3.13
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: '3.13'
 
@@ -79,7 +79,7 @@ jobs:
             -m "cyberdeck-v${VERSION}.tar.gz"
 
       - name: Create release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: |
             cyberdeck-v${{ env.VERSION }}.tar.gz
