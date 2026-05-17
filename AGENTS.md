@@ -49,7 +49,14 @@ All environment variables use the `CYBERDECK_` prefix (e.g. `CYBERDECK_DATA_DIR=
 
 ## Architecture
 
-This is a **Raspberry Pi offline-first device** (cyberdeck). The FastAPI backend manages downloadable content modules (ZIM files for Kiwix, mbtiles for maps). A Chromium kiosk displays the web UI at boot.
+This is a **Raspberry Pi offline-first device** (cyberdeck). The FastAPI backend manages downloadable content modules (ZIM files for Kiwix, mbtiles for maps).
+
+**Two deployment modes — both are first-class:**
+
+- **Headless** — the Pi runs without a display; users connect over the local network from their phone, tablet, or laptop. This is the default mode and the most common use case.
+- **Kiosk** — the Pi has a display attached and boots into a Chromium kiosk pointed at the local web UI.
+
+The UI must work well in both modes. That means **mobile-first responsive design is mandatory**: layouts adapt from narrow phone screens up through tablet and desktop/kiosk widths. The kiosk display is just another viewport — not a privileged target.
 
 **Data flow:**
 - `Settings` (`app/config.py`) — single source of truth for paths and ports; injected everywhere

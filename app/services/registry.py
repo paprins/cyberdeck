@@ -9,7 +9,7 @@ from app.models.library import (
 )
 from app.models.registry import Module, Registry
 
-_DEFAULT_UPDATE_SERVER = "https://updates.example.com/cyberdeck/manifest.json"
+_DEFAULT_UPDATE_SERVER = ""
 
 
 def load_registry(settings: Settings) -> Registry:
@@ -94,11 +94,14 @@ def add_library(
 
 def remove_library(settings: Settings, library_id: str) -> None:
     """Remove a library; prune Available modules from it, clear source on Installed."""
+    from app.services.thumbnails import delete_thumbnail
+
     registry = load_registry(settings)
     if not any(lib.id == library_id for lib in registry.libraries):
         raise LibraryNotFoundError(library_id)
 
     kept_modules: list[Module] = []
+    dropped_ids: list[str] = []
     for m in registry.modules:
         if m.source_library_id != library_id:
             kept_modules.append(m)
@@ -106,6 +109,11 @@ def remove_library(settings: Settings, library_id: str) -> None:
         if m.is_installed:
             m.source_library_id = None
             kept_modules.append(m)
+        else:
+            dropped_ids.append(m.id)
     registry.modules = kept_modules
     registry.libraries = [lib for lib in registry.libraries if lib.id != library_id]
     save_registry(settings, registry)
+
+    for module_id in dropped_ids:
+        delete_thumbnail(module_id, settings)

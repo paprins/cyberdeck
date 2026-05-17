@@ -7,6 +7,7 @@ from urllib.parse import parse_qs, urlencode, urljoin, urlparse, urlunparse
 import defusedxml.ElementTree as ET
 import httpx
 
+from app.config import Settings
 from app.models.library import (
     CatalogPage,
     Library,
@@ -16,6 +17,7 @@ from app.models.library import (
     LibraryUnreachableError,
     ValidateResult,
 )
+from app.services.thumbnails import cache_thumbnail
 
 log = logging.getLogger(__name__)
 
@@ -350,8 +352,14 @@ def _assert_meta4_host_matches(meta4_url: str, library_url: str) -> None:
     )
 
 
-async def resolve_entry(entry: LibraryEntry, library: Library) -> dict:
-    """Fetch + parse the entry's ``.meta4`` and return a Module-shaped dict."""
+async def resolve_entry(
+    entry: LibraryEntry, library: Library, settings: Settings
+) -> dict:
+    """Fetch + parse the entry's ``.meta4`` and return a Module-shaped dict.
+
+    Also caches the entry's thumbnail to disk so the home page card image
+    remains available when the device is offline.
+    """
     _assert_meta4_host_matches(entry.meta4_url, library.url)
     try:
         raw = await _fetch_meta4(entry.meta4_url)
@@ -361,6 +369,7 @@ async def resolve_entry(entry: LibraryEntry, library: Library) -> dict:
     parsed = _parse_meta4(raw)
     module_id = module_id_from_acquisition_url(entry.acquisition_url)
     size_bytes = parsed["size_bytes"] or entry.size_bytes or 0
+    cached_image = await cache_thumbnail(module_id, entry.thumbnail_url, settings)
 
     return {
         "id": module_id,
@@ -371,6 +380,6 @@ async def resolve_entry(entry: LibraryEntry, library: Library) -> dict:
         "size_gb": round(size_bytes / (1024 ** 3), 3),
         "checksum": parsed["checksum"],
         "download_url": parsed["download_url"],
-        "image": entry.thumbnail_url,
+        "image": cached_image,
         "source_library_id": library.id,
     }

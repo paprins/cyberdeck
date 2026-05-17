@@ -241,11 +241,17 @@ async def test_fetch_page_propagates_network_error(monkeypatch):
 # ── resolve_entry ────────────────────────────────────────────────────────────
 
 
-async def test_resolve_entry_returns_module_dict(monkeypatch):
+async def test_resolve_entry_returns_module_dict(monkeypatch, tmp_settings):
     async def fake_meta4(url):
         return _META4
 
+    async def fake_image(url):
+        return (b"\x89PNG\r\n\x1a\nbody", "image/png")
+
+    from app.services import thumbnails
+
     monkeypatch.setattr(lib_svc, "_fetch_meta4", fake_meta4)
+    monkeypatch.setattr(thumbnails, "_fetch_image", fake_image)
     entry = LibraryEntry(
         entry_id="urn:uuid:e1",
         title="MDWiki",
@@ -257,17 +263,17 @@ async def test_resolve_entry_returns_module_dict(monkeypatch):
         thumbnail_url="https://example.org/thumb.png",
     )
     library = Library(id="lib-1", display_name="X", url="https://catalog.example.org/catalog/v2/entries")
-    result = await lib_svc.resolve_entry(entry, library)
+    result = await lib_svc.resolve_entry(entry, library, tmp_settings)
     assert result["id"] == "mdwiki_en_all_maxi_2025-11"
     assert result["latest_version"] == "mdwiki_en_all_maxi_2025-11"
     assert result["checksum"].startswith("sha256:")
     assert result["download_url"].startswith("https://mirror1.")
     assert result["source_library_id"] == "lib-1"
-    assert result["image"] == "https://example.org/thumb.png"
+    assert result["image"] == "/data-static/images/mdwiki_en_all_maxi_2025-11.png"
     assert result["category"] == "library"
 
 
-async def test_resolve_entry_propagates_unreachable(monkeypatch):
+async def test_resolve_entry_propagates_unreachable(monkeypatch, tmp_settings):
     async def fake_meta4(url):
         raise httpx.RequestError("down")
     monkeypatch.setattr(lib_svc, "_fetch_meta4", fake_meta4)
@@ -278,10 +284,10 @@ async def test_resolve_entry_propagates_unreachable(monkeypatch):
     )
     library = Library(id="lib", display_name="X", url="https://x.example.org/catalog/v2/entries")
     with pytest.raises(LibraryUnreachableError):
-        await lib_svc.resolve_entry(entry, library)
+        await lib_svc.resolve_entry(entry, library, tmp_settings)
 
 
-async def test_resolve_entry_rejects_foreign_meta4_host():
+async def test_resolve_entry_rejects_foreign_meta4_host(tmp_settings):
     entry = LibraryEntry(
         entry_id="x", title="x",
         acquisition_url="http://127.0.0.1/x.zim",
@@ -289,10 +295,10 @@ async def test_resolve_entry_rejects_foreign_meta4_host():
     )
     library = Library(id="lib", display_name="X", url="https://library.example.org/catalog/v2/entries")
     with pytest.raises(LibraryParseError):
-        await lib_svc.resolve_entry(entry, library)
+        await lib_svc.resolve_entry(entry, library, tmp_settings)
 
 
-async def test_resolve_entry_accepts_sibling_subdomain():
+async def test_resolve_entry_accepts_sibling_subdomain(tmp_settings):
     """Kiwix's OPDS feed references a CDN subdomain (e.g. lbo.download.kiwix.org)."""
     async def fake_meta4(url):
         return _META4
@@ -305,7 +311,7 @@ async def test_resolve_entry_accepts_sibling_subdomain():
             meta4_url="https://lbo.download.example.org/zim/foo_2025-01.zim.meta4",
         )
         library = Library(id="lib", display_name="X", url="https://library.example.org/catalog/v2/entries")
-        result = await lib_svc.resolve_entry(entry, library)
+        result = await lib_svc.resolve_entry(entry, library, tmp_settings)
         assert result["id"] == "foo_2025-01"
 
 
@@ -369,6 +375,33 @@ def test_remove_library_raises_not_found(tmp_settings):
     _seed(tmp_settings)
     with pytest.raises(LibraryNotFoundError):
         registry_svc.remove_library(tmp_settings, "nope")
+
+
+def test_remove_library_deletes_cached_thumbnails_for_dropped_modules(tmp_settings):
+    lib = Library(id="L1", display_name="X", url="https://x/")
+    available = Module(
+        id="pkg1", display_name="P", category="library",
+        description="", latest_version="v1", size_gb=1.0, checksum="sha256:a",
+        image="/data-static/images/pkg1.png",
+        source_library_id="L1",
+    )
+    installed = Module(
+        id="pkg2", display_name="I", category="library",
+        description="", latest_version="v1", size_gb=1.0, checksum="sha256:b",
+        installed_version="v1", installed_checksum="sha256:b", active=True,
+        image="/data-static/images/pkg2.png",
+        source_library_id="L1",
+    )
+    _seed(tmp_settings, libraries=[lib], modules=[available, installed])
+    tmp_settings.images_dir.mkdir(parents=True, exist_ok=True)
+    (tmp_settings.images_dir / "pkg1.png").write_bytes(b"a")
+    (tmp_settings.images_dir / "pkg2.png").write_bytes(b"b")
+
+    registry_svc.remove_library(tmp_settings, "L1")
+
+    assert not (tmp_settings.images_dir / "pkg1.png").exists()
+    # Installed module is kept (source cleared) so its thumbnail stays.
+    assert (tmp_settings.images_dir / "pkg2.png").exists()
 
 
 # ── HTTP fixtures ────────────────────────────────────────────────────────────

@@ -27,6 +27,10 @@ class Settings(BaseSettings):
         return self.data_dir / "downloads"
 
     @property
+    def images_dir(self) -> Path:
+        return self.data_dir / "static" / "images"
+
+    @property
     def registry_path(self) -> Path:
         return self.data_dir / "packages" / "registry.json"
 

@@ -93,7 +93,7 @@ def make_router(cfg: Settings) -> APIRouter:
             return _error_response(LibraryNotFoundError(library_id))
 
         results = await asyncio.gather(
-            *(lib_svc.resolve_entry(entry, library) for entry in req.entries),
+            *(lib_svc.resolve_entry(entry, library, cfg) for entry in req.entries),
             return_exceptions=True,
         )
 

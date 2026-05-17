@@ -473,6 +473,26 @@ async def test_check_for_updates_raises_on_network_error(tmp_settings, monkeypat
         await pkg_service.check_for_updates(tmp_settings)
 
 
+async def test_check_for_updates_returns_zero_when_no_server_configured(tmp_settings, monkeypatch):
+    """Fresh installs have an empty update_server; we must not attempt the HTTP call."""
+    tmp_settings.registry_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_settings.registry_path.write_text(Registry(update_server="").model_dump_json())
+
+    called = False
+
+    class _FailIfCalled:
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        async def get(self, *a, **kw):
+            nonlocal called
+            called = True
+            raise AssertionError("HTTP must not fire when update_server is empty")
+
+    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _FailIfCalled)
+    assert await pkg_service.check_for_updates(tmp_settings) == 0
+    assert called is False
+
+
 # ── HTTP fixtures ─────────────────────────────────────────────────────────────
 
 @pytest.fixture

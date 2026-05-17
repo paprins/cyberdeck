@@ -8,7 +8,7 @@
   <div class="absolute inset-0 bg-background/60" @click="wifi_panel_open = false"></div>
 
   <div
-    class="absolute top-16 right-6 w-96 max-h-[calc(100vh-5rem)] bg-surface-container border border-outline-variant/30 overflow-y-auto"
+    class="absolute top-16 inset-x-3 sm:inset-x-auto sm:right-6 sm:w-96 max-h-[calc(100dvh-5rem)] bg-surface-container border border-outline-variant/30 overflow-y-auto"
     @click.stop
     x-data="{
       networks: [],
@@ -93,11 +93,12 @@
       <div class="flex items-center gap-1">
         <button @click="load()" :disabled="loading"
                 :class="loading ? 'opacity-40 cursor-not-allowed' : 'hover:text-primary'"
-                class="text-on-surface/40 p-2 -m-2">
+                class="tac-icon-btn text-on-surface/40 -my-2">
           <span class="material-symbols-outlined text-[18px]"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">refresh</span>
         </button>
-        <button @click="wifi_panel_open = false" class="text-on-surface/40 hover:text-on-surface p-2 -m-2">
+        <button @click="wifi_panel_open = false"
+                class="tac-icon-btn text-on-surface/40 hover:text-on-surface -my-2">
           <span class="material-symbols-outlined text-[18px]"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">close</span>
         </button>
@@ -120,7 +121,7 @@
     <div>
       <template x-for="net in networks" :key="net.ssid">
         <div
-          class="px-4 py-3 border-b border-outline-variant/15 flex items-center gap-3"
+          class="tac-row px-4 py-3 border-b border-outline-variant/15 gap-3"
           :class="net.in_use ? 'bg-surface-container-low' : 'hover:bg-surface-container-high cursor-pointer'"
           @click="select(net)"
         >
@@ -129,7 +130,7 @@
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
                 x-text="net.security ? 'wifi_lock' : 'wifi'"></span>
 
-          <div class="flex-1 min-w-0">
+          <div class="tac-row-title">
             <div class="font-headline font-bold text-[11px] tracking-[0.04em] uppercase truncate"
                  :class="net.in_use ? 'text-tertiary' : 'text-on-surface'"
                  x-text="net.ssid"></div>
@@ -142,22 +143,24 @@
           </div>
 
           <template x-if="net.in_use">
-            <div class="flex gap-1 flex-shrink-0">
+            <div class="tac-row-actions gap-1">
               <button @click.stop="doDisconnect()"
-                      class="font-headline text-[9px] font-bold px-3 py-[6px] border text-on-surface/60 border-outline-variant/30 hover:bg-surface-container-high tracking-[0.06em]">
+                      class="tac-btn font-headline text-[9px] font-bold px-3 py-[6px] border text-on-surface/60 border-outline-variant/30 hover:bg-surface-container-high tracking-[0.06em]">
                 DISCONNECT
               </button>
               <button @click.stop="doForget(net.ssid)"
-                      class="font-headline text-[9px] font-bold px-3 py-[6px] border text-error border-error/40 hover:bg-error/10 tracking-[0.06em]">
+                      class="tac-btn font-headline text-[9px] font-bold px-3 py-[6px] border text-error border-error/40 hover:bg-error/10 tracking-[0.06em]">
                 FORGET
               </button>
             </div>
           </template>
           <template x-if="!net.in_use && net.saved">
-            <button @click.stop="doForget(net.ssid)"
-                    class="font-headline text-[9px] font-bold px-3 py-[6px] border text-error border-error/40 hover:bg-error/10 flex-shrink-0 tracking-[0.06em]">
-              FORGET
-            </button>
+            <div class="tac-row-actions">
+              <button @click.stop="doForget(net.ssid)"
+                      class="tac-btn font-headline text-[9px] font-bold px-3 py-[6px] border text-error border-error/40 hover:bg-error/10 tracking-[0.06em]">
+                FORGET
+              </button>
+            </div>
           </template>
         </div>
       </template>
@@ -183,7 +186,7 @@
           type="submit"
           :disabled="!hiddenSsid.trim()"
           :class="!hiddenSsid.trim() ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-          class="font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/40 tracking-[0.06em]"
+          class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/40 tracking-[0.06em]"
         >ADD</button>
       </form>
     </div>
@@ -280,7 +283,7 @@
           class="w-full bg-surface-container border border-outline-variant/30 px-3 py-2 pr-10 font-body text-[12px] text-on-surface focus:outline-none focus:border-primary-container/50"
         >
         <button type="button" @click="showPw = !showPw"
-                class="absolute right-1 top-1/2 -translate-y-1/2 text-on-surface/40 hover:text-on-surface p-2">
+                class="tac-icon-btn absolute right-0 top-1/2 -translate-y-1/2 text-on-surface/40 hover:text-on-surface">
           <span class="material-symbols-outlined text-[16px]"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
                 x-text="showPw ? 'visibility_off' : 'visibility'"></span>
@@ -298,13 +301,13 @@
 
     <div class="flex gap-3">
       <button @click="open = false"
-              class="flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">
+              class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">
         CANCEL
       </button>
       <button @click="submit()"
               :disabled="connecting"
               :class="connecting ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-              class="flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-primary-container/50 text-primary-container">
+              class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-primary-container/50 text-primary-container">
         <span x-show="!connecting">CONNECT</span>
         <span x-show="connecting" x-cloak>CONNECTING...</span>
       </button>

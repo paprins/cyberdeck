@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<main class="flex-1 overflow-y-auto xl:overflow-hidden flex flex-col p-8">
+<main class="flex-1 lg:overflow-y-auto xl:overflow-hidden flex flex-col p-4 sm:p-6 xl:p-8">
 
   {#-- Category metadata: icon, badge, image --#}
   {%- set META = {
@@ -22,9 +22,9 @@
     {%- set meta = META.get(cat, {'icon': 'folder', 'badge': None, 'badge_bg': '', 'badge_text': ''}) -%}
     {%- set img = card.module.image or meta.image -%}
     <a href="{{ card.url }}"
-       class="bg-surface-container flex flex-col cursor-pointer group border-b-2 border-transparent hover:bg-surface-container-high hover:border-primary min-h-0 overflow-hidden">
+       class="bg-surface-container flex flex-col cursor-pointer group border-b-2 border-transparent hover:bg-surface-container-high hover:border-primary-container min-h-0 overflow-hidden">
       {#-- Image --#}
-      <div class="relative overflow-hidden h-44 xl:h-auto xl:flex-1 xl:basis-1/2 xl:min-h-0">
+      <div class="relative overflow-hidden aspect-[3/2] xl:aspect-auto xl:h-auto xl:flex-1 xl:basis-1/2 xl:min-h-0">
         {% if img %}
         <img src="{{ img }}"
              alt="{{ card.module.display_name }}"

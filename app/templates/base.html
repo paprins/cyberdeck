@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en" class="lg:h-full">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=1280, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Cyberdeck</title>
   <link rel="stylesheet" href="/static/css/app.css">
-  <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet">
   <script defer src="/static/js/alpine.min.js"></script>
   <script defer src="/static/js/toasts.js"></script>
 </head>
 <body
-  class="bg-surface text-on-surface font-body h-full overflow-hidden flex flex-col"
+  {# lg+: overflow-hidden locks the fixed kiosk shell; below lg the body scrolls naturally. #}
+  class="bg-surface text-on-surface font-body min-h-dvh lg:h-full lg:overflow-hidden flex flex-col"
   x-data="{
     battery_pct: {{ battery_pct | tojson }},
     battery_charging: {{ battery_charging | tojson }},
@@ -90,21 +90,20 @@
 >
 
   <!-- ── Header ── -->
-  <header class="bg-surface w-full z-50 flex justify-between items-center px-6 flex-shrink-0 border-b border-outline-variant/15"
-          style="height:64px;">
+  <header class="bg-surface w-full z-50 flex justify-between items-center px-3 sm:px-6 flex-shrink-0 border-b border-outline-variant/15 h-16 sticky top-0 lg:static">
 
     <!-- Left: brand + search -->
-    <div class="flex items-center gap-6">
+    <div class="flex items-center gap-3 sm:gap-6 min-w-0">
       <!-- Logo + Wordmark (links to homepage) -->
-      <a href="/" class="flex items-center gap-6 flex-shrink-0">
-        <div class="w-10 h-10 bg-primary-container flex items-center justify-center">
+      <a href="/" class="flex items-center gap-3 sm:gap-6 flex-shrink-0 min-w-0">
+        <div class="w-10 h-10 bg-primary-container flex items-center justify-center flex-shrink-0">
           <span class="material-symbols-outlined text-on-primary-container text-2xl" style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">radar</span>
         </div>
-        <div class="flex flex-col">
-          <div class="text-xl font-bold text-primary-container tracking-tighter font-headline uppercase leading-none">
+        <div class="flex flex-col min-w-0">
+          <div class="text-base sm:text-xl font-bold text-primary-container tracking-tighter font-headline uppercase leading-none truncate">
             SURVIVAL_DASHBOARD
           </div>
-          <div class="text-[8px] font-label tracking-[0.3em] uppercase mt-1 leading-none text-primary/60">
+          <div class="hidden sm:block text-[8px] font-label tracking-[0.3em] uppercase mt-1 leading-none text-primary/60">
             SECURE_ACCESS // SECTOR_G14
           </div>
         </div>
@@ -153,24 +152,26 @@
     </div>
 
     <!-- Right: status + shutdown -->
-    <div class="flex items-center gap-6">
+    <div class="flex items-center gap-1 sm:gap-6 flex-shrink-0">
 
       <!-- System icons -->
-      <div class="flex items-center gap-4 text-on-surface/70">
-        <a href="/settings" title="Settings" class="flex items-center hover:text-primary">
+      <div class="flex items-center gap-0 sm:gap-4 text-on-surface/70">
+        <a href="/settings" title="Settings" class="tac-icon-btn hover:text-primary">
           <span class="material-symbols-outlined cursor-pointer"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">settings</span>
         </a>
-        <span class="material-symbols-outlined"
-              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
+        <span class="tac-icon-btn cursor-pointer"
               :class="batteryClass()"
-              :title="'Battery: ' + (battery_pct ?? '?') + '%' + (battery_charging ? ' (charging)' : '')"
-              x-text="batteryIcon()">battery_full</span>
+              :title="'Battery: ' + (battery_pct ?? '?') + '%' + (battery_charging ? ' (charging)' : '')">
+          <span class="material-symbols-outlined"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
+                x-text="batteryIcon()">battery_full</span>
+        </span>
         <button type="button"
                 @click="wifi_panel_open = !wifi_panel_open"
                 :class="wifi_connected ? 'text-tertiary hover:text-primary' : 'hover:text-primary'"
                 :title="wifi_connected ? 'Online' : 'Offline'"
-                class="leading-none">
+                class="tac-icon-btn">
           <span class="material-symbols-outlined cursor-pointer"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
                 x-text="wifi_connected ? 'wifi' : 'wifi_off'">wifi</span>
@@ -182,7 +183,7 @@
   </header>
 
   <!-- ── Main content ── -->
-  <div class="flex-1 flex flex-col overflow-hidden">
+  <div class="flex-1 flex flex-col lg:overflow-hidden">
     {% block content %}{% endblock %}
   </div>
 

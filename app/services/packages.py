@@ -11,6 +11,7 @@ import httpx
 from app.config import Settings
 from app.models.registry import Module
 from app.services.registry import load_registry, save_registry, merge_remote_manifest
+from app.services.thumbnails import cache_thumbnail
 
 log = logging.getLogger(__name__)
 
@@ -322,12 +323,21 @@ def _drain_pending(settings: Settings) -> None:
 
 async def check_for_updates(settings: Settings) -> int:
     registry = load_registry(settings)
+    if not registry.update_server:
+        return 0
     async with httpx.AsyncClient() as client:
         r = await client.get(registry.update_server, timeout=10.0)
         r.raise_for_status()
         remote_modules = r.json()
     before_ids = {m.id for m in load_registry(settings).modules}
     before_versions = {m.id: m.latest_version for m in load_registry(settings).modules}
+
+    cached_images = await asyncio.gather(
+        *(cache_thumbnail(m["id"], m.get("image"), settings) for m in remote_modules)
+    )
+    for m, cached in zip(remote_modules, cached_images):
+        m["image"] = cached
+
     merge_remote_manifest(settings, remote_modules)
     after = load_registry(settings).modules
     return sum(

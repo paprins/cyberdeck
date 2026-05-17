@@ -22,7 +22,8 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        for d in (cfg.zim_dir, cfg.maps_dir, cfg.downloads_dir, cfg.registry_path.parent):
+        for d in (cfg.zim_dir, cfg.maps_dir, cfg.downloads_dir,
+                  cfg.registry_path.parent, cfg.images_dir):
             d.mkdir(parents=True, exist_ok=True)
         init_kiwix_library(cfg)
         probe_task = asyncio.create_task(services_probe_loop(cfg))
@@ -43,9 +44,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     if _STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
 
-    data_static_dir = cfg.data_dir / "static"
-    if data_static_dir.exists():
-        app.mount("/data-static", StaticFiles(directory=data_static_dir), name="data-static")
+    # check_dir=False defers the directory check to request time, so the mount
+    # registers even on a fresh install where the dir is created later by lifespan.
+    app.mount(
+        "/data-static",
+        StaticFiles(directory=cfg.data_dir / "static", check_dir=False),
+        name="data-static",
+    )
 
     from app.routers import system as system_router
     app.include_router(system_router.make_router(cfg))
