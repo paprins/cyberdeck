@@ -6,18 +6,18 @@ services:
       - -c
       - |
         [ -f /data/zim/library.xml ] || printf '<?xml version="1.0" encoding="UTF-8"?>\n<library version="20110515">\n</library>\n' > /data/zim/library.xml
-        exec /usr/local/bin/kiwix-serve --port=8080 --library /data/zim/library.xml --monitorLibrary
+        exec /usr/local/bin/kiwix-serve --port=8080 --urlRootLocation /kiwix --library /data/zim/library.xml --monitorLibrary
     volumes:
       - ./data/zim:/data/zim
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
     restart: on-failure
 
   mbtileserver:
     image: ghcr.io/consbio/mbtileserver:latest
-    command: --port 8081 --dir /data/maps
+    command: --port 8081 --root-url /maps --dir /data/maps
     volumes:
       - ./data/maps:/data/maps:ro
     ports:
-      - "8081:8081"
+      - "127.0.0.1:8081:8081"
     restart: on-failure

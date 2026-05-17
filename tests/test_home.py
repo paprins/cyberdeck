@@ -85,7 +85,7 @@ async def test_home_maps_module_has_viewer_url(client, tmp_settings):
     )
     save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert 'href="/view?url=http://localhost:8081/' in r.text
+    assert 'href="/view?url=/maps/' in r.text
 
 
 async def test_home_medical_module_has_viewer_url(client, tmp_settings):
@@ -101,7 +101,7 @@ async def test_home_medical_module_has_viewer_url(client, tmp_settings):
     )
     save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert 'href="/view?url=http://localhost:8080/medical-wikimed/' in r.text
+    assert 'href="/view?url=/kiwix/content/medical-wikimed/' in r.text
 
 
 async def test_view_route_renders_iframe(client):

@@ -8,7 +8,10 @@ User=pi
 Group=pi
 ExecStart=/usr/bin/kiwix-serve \
     --port 8080 \
-    --library /data/zim/library.xml
+    --address 127.0.0.1 \
+    --urlRootLocation /kiwix \
+    --library /data/zim/library.xml \
+    --monitorLibrary
 Restart=on-failure
 RestartSec=5
 Nice=10

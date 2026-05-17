@@ -16,7 +16,7 @@ async def kiwix_suggestions(
 ) -> list[str]:
     try:
         r = await client.get(
-            f"http://localhost:{kiwix_port}/suggest",
+            f"http://localhost:{kiwix_port}/kiwix/suggest",
             params={"content": module.id, "term": query, "count": count},
             timeout=2.0,
         )
@@ -42,7 +42,7 @@ async def search_modules(
     )
     results = []
     for module, titles in zip(searchable, all_titles):
-        search_url = f"http://localhost:{kiwix_port}/search?" + urlencode({"content": module.id, "pattern": query})
+        search_url = "/kiwix/search?" + urlencode({"content": module.id, "pattern": query})
         for title in titles:
             results.append({"title": title, "module": module.display_name, "url": search_url})
     return results

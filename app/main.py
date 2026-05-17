@@ -1,6 +1,7 @@
 from __future__ import annotations
 import asyncio
 from contextlib import asynccontextmanager
+import httpx
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -15,13 +16,15 @@ _STATIC_DIR = Path(__file__).parent / "static"
 
 def create_app(settings: Settings | None = None) -> FastAPI:
     cfg = settings or Settings()
+    # Shared proxy client. Constructed eagerly (no async I/O) so tests using
+    # ASGITransport — which does not run lifespan events — still have it.
+    http_client = httpx.AsyncClient(timeout=30.0, follow_redirects=False)
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         for d in (cfg.zim_dir, cfg.maps_dir, cfg.downloads_dir, cfg.registry_path.parent):
             d.mkdir(parents=True, exist_ok=True)
         init_kiwix_library(cfg)
-        app.state.settings = cfg
         probe_task = asyncio.create_task(services_probe_loop(cfg))
         try:
             yield
@@ -31,8 +34,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
                 await probe_task
             except asyncio.CancelledError:
                 pass
+            await http_client.aclose()
 
     app = FastAPI(title="Cyberdeck", lifespan=lifespan)
+    app.state.settings = cfg
+    app.state.http_client = http_client
 
     if _STATIC_DIR.exists():
         app.mount("/static", StaticFiles(directory=_STATIC_DIR), name="static")
@@ -64,6 +70,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     from app.routers import libraries as libraries_router
     app.include_router(libraries_router.make_router(cfg))
+
+    from app.routers import proxy as proxy_router
+    app.include_router(proxy_router.make_router(cfg))
 
     @app.get("/health")
     async def health():

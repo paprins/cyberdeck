@@ -189,7 +189,7 @@ async def test_search_endpoint_result_shape(client, tmp_settings, monkeypatch):
 
     import app.routers.search as search_router_module
     async def _fake_search(query, active_modules, kiwix_port, http_client):
-        return [{"title": "First Aid", "module": "Medical", "url": "http://localhost:8080/search?content=medical-wikimed&pattern=first"}]
+        return [{"title": "First Aid", "module": "Medical", "url": "/kiwix/search?content=medical-wikimed&pattern=first"}]
     monkeypatch.setattr(search_router_module, "search_modules", _fake_search)
 
     r = await client.get("/api/search?q=first")

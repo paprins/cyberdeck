@@ -18,20 +18,20 @@ class ModuleCard:
     url: str
 
 
-def _external_url(module: Module, cfg: Settings) -> str | None:
+def _external_url(module: Module) -> str | None:
     if module.category == "maps":
-        return f"http://localhost:{cfg.mbtiles_port}/"
+        return "/maps/"
     if module.category == "internet":
         return "https://duckduckgo.com"
     if module.category != "packages":
-        return f"http://localhost:{cfg.kiwix_port}/{module.id}/"
+        return f"/kiwix/content/{module.id}/"
     return None
 
 
-def _tile_url(module: Module, cfg: Settings) -> str:
+def _tile_url(module: Module) -> str:
     if module.category == "packages":
         return "/settings/packages"
-    ext = _external_url(module, cfg)
+    ext = _external_url(module)
     return f"/view?url={ext}" if ext else "/settings/packages"
 
 
@@ -44,7 +44,7 @@ def make_router(cfg: Settings) -> APIRouter:
         registry = load_registry(cfg)
         status = read_system_status(cfg)
         active = [m for m in registry.modules if m.active]
-        cards = [ModuleCard(module=m, url=_tile_url(m, cfg)) for m in active]
+        cards = [ModuleCard(module=m, url=_tile_url(m)) for m in active]
         return templates.TemplateResponse(request, "home.html", {
             "cards": cards,
             "battery_pct": status.battery_pct,

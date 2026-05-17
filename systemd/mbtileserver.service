@@ -8,6 +8,8 @@ User=pi
 Group=pi
 ExecStart=/usr/local/bin/mbtileserver \
     --port 8081 \
+    --host 127.0.0.1 \
+    --root-url /maps \
     --dir /data/maps \
     --enable-reload-signal
 Restart=on-failure
