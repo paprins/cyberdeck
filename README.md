@@ -19,6 +19,13 @@ The installer fetches the latest release's tarball + minisign signature from
 GitHub, verifies it against the public key at `release.pub` on `main`, then
 extracts to `/opt/cyberdeck/v<version>/`. No git clone, no source on disk.
 
+To pin to a specific release instead of the latest, append `--version`:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/paprins/cyberdeck/main/scripts/install.sh \
+  | bash -s -- --headless --version 0.1.2
+```
+
 If you've forked the repo, override with `CYBERDECK_REPO=<owner>/cyberdeck`
 before `bash`.
 

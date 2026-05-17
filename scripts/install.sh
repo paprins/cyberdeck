@@ -239,8 +239,8 @@ fi
 WHEEL_DIR="${TARGET_DIR}/dist/wheels"
 PIP="${TARGET_DIR}/.venv/bin/pip"
 if [[ -d "${WHEEL_DIR}" ]]; then
-    echo "Installing dependencies from bundled wheels..."
-    "${PIP}" install --no-index --find-links "${WHEEL_DIR}" "${TARGET_DIR}"
+    echo "Installing cyberdeck from bundled wheels..."
+    "${PIP}" install --no-index --find-links "${WHEEL_DIR}" "cyberdeck==${VERSION}"
 else
     echo "Installing dependencies from PyPI..."
     "${PIP}" install --upgrade pip
