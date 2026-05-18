@@ -28,6 +28,8 @@ async def test_system_endpoint_returns_all_keys(client):
     assert "battery_pct" in data
     assert "battery_charging" in data
     assert "wifi_connected" in data
+    assert "is_online" in data
+    assert "connectivity" in data
     assert "updates_available" in data
     assert "uptime_s" in data
     assert "notifications" in data
@@ -37,9 +39,10 @@ async def test_system_endpoint_notifications_shape(client):
     r = await client.get("/api/system")
     n = r.json()["notifications"]
     for key in (
-        "check_for_updates", "wifi_connected", "package_updates",
+        "check_for_updates", "connectivity_check", "wifi_connected", "package_updates",
         "downloads", "services", "firmware_update_available",
         "upgrade_phase", "upgrade_target_version",
+        "connectivity_check_auto_disabled_at", "connectivity_grace_minutes",
     ):
         assert key in n
     assert isinstance(n["package_updates"], list)

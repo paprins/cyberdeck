@@ -15,7 +15,10 @@
     battery_pct: {{ battery_pct | tojson }},
     battery_charging: {{ battery_charging | tojson }},
     wifi_connected: {{ wifi_connected | tojson }},
+    is_online: {{ is_online | default(None) | tojson }},
+    connectivity: { last_state: 'unknown', last_latency_ms: null, last_checked_at: null, target: null },
     wifi_panel_open: false,
+    connectivity_panel_open: false,
     lastActivity: Date.now(),
     dimmed: false,
     restorePct: null,
@@ -44,6 +47,8 @@
         this.battery_pct = d.battery_pct;
         this.battery_charging = d.battery_charging;
         this.wifi_connected = d.wifi_connected;
+        if ('is_online' in d) this.is_online = d.is_online;
+        if (d.connectivity) this.connectivity = d.connectivity;
         if (d.notifications) {
           window.dispatchEvent(new CustomEvent('notifications-update', { detail: d.notifications }));
         }
@@ -103,7 +108,7 @@
           <div class="text-base sm:text-xl font-bold text-primary-container tracking-tighter font-headline uppercase leading-none truncate">
             SURVIVAL_DASHBOARD
           </div>
-          <div class="hidden sm:block text-[8px] font-label tracking-[0.3em] uppercase mt-1 leading-none text-primary/60">
+          <div class="hidden sm:block text-[8px] font-label tracking-[0.3em] uppercase mt-1 leading-none text-primary-container/60">
             SECURE_ACCESS // SECTOR_G14
           </div>
         </div>
@@ -170,11 +175,23 @@
         <button type="button"
                 @click="wifi_panel_open = !wifi_panel_open"
                 :class="wifi_connected ? 'text-tertiary hover:text-primary' : 'hover:text-primary'"
-                :title="wifi_connected ? 'Online' : 'Offline'"
+                :title="wifi_connected ? 'WIFI_CONNECTED' : 'WIFI_DISCONNECTED'"
                 class="tac-icon-btn">
           <span class="material-symbols-outlined cursor-pointer"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
                 x-text="wifi_connected ? 'wifi' : 'wifi_off'">wifi</span>
+        </button>
+
+        <button type="button"
+                x-show="is_online !== null"
+                x-cloak
+                @click="connectivity_panel_open = !connectivity_panel_open"
+                :class="is_online ? 'text-success hover:text-primary' : 'text-on-surface/40 hover:text-primary'"
+                :title="is_online ? 'ONLINE' : 'OFFLINE'"
+                class="tac-icon-btn">
+          <span class="material-symbols-outlined cursor-pointer"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24"
+                x-text="is_online ? 'public' : 'public_off'">public</span>
         </button>
 
         {% include "_power_menu.html" %}
@@ -188,6 +205,7 @@
   </div>
 
   {% include "_wifi_panel.html" %}
+  {% include "_connectivity_panel.html" %}
   {% include "_toasts.html" %}
 
 </body>

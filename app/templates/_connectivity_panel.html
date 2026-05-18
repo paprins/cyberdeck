@@ -1,0 +1,94 @@
+<!-- ── Connectivity panel ── -->
+<div
+  x-show="connectivity_panel_open"
+  x-cloak
+  @keydown.escape.window="connectivity_panel_open = false"
+  class="fixed inset-0 z-40"
+>
+  <div class="absolute inset-0 bg-background/60" @click="connectivity_panel_open = false"></div>
+
+  <div
+    class="absolute top-16 inset-x-3 sm:inset-x-auto sm:right-6 sm:w-80 max-h-[calc(100dvh-5rem)] bg-surface-container border border-outline-variant/30 overflow-y-auto"
+    @click.stop
+    x-data="{
+      fmtAge(checked_at) {
+        if (!checked_at) return 'NO_DATA';
+        const s = Math.max(0, Math.round(Date.now()/1000 - checked_at));
+        if (s < 60) return s + 'S_AGO';
+        if (s < 3600) return Math.floor(s/60) + 'M_AGO';
+        return Math.floor(s/3600) + 'H_AGO';
+      },
+      stateLabel(s) {
+        if (s === 'online') return 'ONLINE';
+        if (s === 'offline') return 'OFFLINE';
+        return 'UNKNOWN';
+      },
+      stateClass(s) {
+        if (s === 'online') return 'text-success';
+        if (s === 'offline') return 'text-error';
+        return 'text-on-surface/40';
+      },
+      stateDotClass(s) {
+        if (s === 'online') return 'bg-success';
+        if (s === 'offline') return 'bg-error';
+        return 'bg-on-surface/30';
+      },
+    }"
+  >
+    <!-- Header -->
+    <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/20">
+      <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-on-surface">CONNECTIVITY</div>
+      <button @click="connectivity_panel_open = false"
+              class="tac-icon-btn text-on-surface/40 hover:text-on-surface -my-2">
+        <span class="material-symbols-outlined text-[18px]"
+              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">close</span>
+      </button>
+    </div>
+
+    <!-- State row -->
+    <div class="px-4 py-4 border-b border-outline-variant/15">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 flex-shrink-0" :class="stateDotClass(connectivity.last_state)"></span>
+        <span class="font-headline font-bold text-[13px] tracking-[0.08em] uppercase"
+              :class="stateClass(connectivity.last_state)"
+              x-text="stateLabel(connectivity.last_state)">UNKNOWN</span>
+      </div>
+      <div class="font-body text-[10px] text-on-surface/40 tracking-[0.06em] uppercase mt-2">
+        <span x-show="connectivity.last_state === 'online'">Internet reachable from this device.</span>
+        <span x-show="connectivity.last_state === 'offline'">No route to probe target. Network may be local-only.</span>
+        <span x-show="connectivity.last_state === 'unknown' || !connectivity.last_state">No probe data yet. Connectivity check may be disabled.</span>
+      </div>
+    </div>
+
+    <!-- Detail grid -->
+    <div class="px-4 py-3 space-y-[10px]">
+      <div class="flex items-center justify-between gap-3">
+        <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">TARGET</span>
+        <span class="font-body text-[11px] text-on-surface tabular-nums truncate"
+              x-text="connectivity.target || '—'">—</span>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">LAST_CHECK</span>
+        <span class="font-body text-[11px] text-on-surface tabular-nums tracking-[0.06em] uppercase"
+              x-text="fmtAge(connectivity.last_checked_at)">NO_DATA</span>
+      </div>
+      <div class="flex items-center justify-between gap-3">
+        <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">LATENCY</span>
+        <span class="font-body text-[11px] tabular-nums tracking-[0.06em] uppercase"
+              :class="connectivity.last_latency_ms !== null && connectivity.last_state === 'online' ? 'text-on-surface' : 'text-on-surface/40'"
+              x-text="connectivity.last_latency_ms !== null && connectivity.last_state === 'online' ? connectivity.last_latency_ms + ' MS' : 'NO_RTT'">NO_RTT</span>
+      </div>
+    </div>
+
+    <!-- Footer link -->
+    <div class="border-t border-outline-variant/20 px-4 py-3">
+      <a href="/settings"
+         @click="connectivity_panel_open = false"
+         class="flex items-center justify-between font-headline text-[10px] uppercase tracking-[0.14em] text-on-surface/60 hover:text-primary-container">
+        <span>CONNECTIVITY_SETTINGS</span>
+        <span class="material-symbols-outlined text-[14px]"
+              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">chevron_right</span>
+      </a>
+    </div>
+  </div>
+</div>

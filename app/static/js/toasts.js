@@ -116,6 +116,20 @@
       }
     }
 
+    // ── Connectivity check auto-disabled (warning, fires once per disable event) ──
+    const prevAutoDisabled = prev.connectivity_check_auto_disabled_at;
+    const currAutoDisabled = curr.connectivity_check_auto_disabled_at;
+    if (currAutoDisabled != null && currAutoDisabled !== prevAutoDisabled) {
+      const mins = curr.connectivity_grace_minutes || 10;
+      out.push({
+        key: 'conn_check_disabled::' + currAutoDisabled,
+        severity: 'warning',
+        title: 'CONNECTIVITY_CHECK_DISABLED',
+        message: 'NO_INTERNET_FOR_' + mins + '_MINUTES',
+        href: '/settings',
+      });
+    }
+
     // ── Firmware upgrade outcome: phase → success/failed/rolled_back ──
     const prevPhase = prev ? prev.upgrade_phase : null;
     const phase = curr.upgrade_phase;

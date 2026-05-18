@@ -44,7 +44,7 @@
       {#-- Info --#}
       <div class="p-3 flex flex-col shrink-0 min-w-0">
         <div class="flex justify-between items-start mb-1 gap-2">
-          <h4 class="font-headline font-bold text-base uppercase tracking-tight text-on-surface group-hover:text-primary leading-tight truncate">
+          <h4 class="font-headline font-bold text-base uppercase tracking-tight text-on-surface group-hover:text-primary-container leading-tight truncate">
             {{ card.module.display_name | replace(' ', '_') }}
           </h4>
           <span class="material-symbols-outlined text-on-secondary-container text-lg shrink-0"
@@ -55,7 +55,7 @@
         </p>
         <div class="flex justify-between items-center">
           <span class="text-[9px] font-label text-on-surface/40 uppercase">{{ card.module.size_gb }}_GB</span>
-          <span class="text-[9px] font-label text-primary font-bold">VIEW →</span>
+          <span class="text-[9px] font-label text-primary-container font-bold">VIEW →</span>
         </div>
       </div>
     </a>
@@ -63,10 +63,10 @@
 
     {#-- IMPORT_MODULE card (always last) --#}
     <a href="/settings/packages"
-       class="bg-surface-container-lowest flex flex-col items-center justify-center p-3 group hover:border-primary cursor-pointer border border-dashed border-outline-variant/30 min-h-0 overflow-hidden">
-      <span class="material-symbols-outlined text-3xl text-on-surface/20 group-hover:text-primary mb-1"
+       class="bg-surface-container-lowest flex flex-col items-center justify-center p-3 group hover:border-primary-container cursor-pointer border border-dashed border-outline-variant/30 min-h-0 overflow-hidden">
+      <span class="material-symbols-outlined text-3xl text-on-surface/20 group-hover:text-primary-container mb-1"
             style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">add_box</span>
-      <span class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/40 group-hover:text-primary font-bold">
+      <span class="font-label text-xs uppercase tracking-[0.2em] text-on-surface/40 group-hover:text-primary-container font-bold">
         IMPORT_MODULE
       </span>
     </a>

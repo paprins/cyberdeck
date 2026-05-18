@@ -50,6 +50,7 @@ def make_router(cfg: Settings) -> APIRouter:
             "battery_pct": status.battery_pct,
             "battery_charging": status.battery_charging,
             "wifi_connected": status.wifi_connected,
+            "is_online": status.is_online,
         })
 
     @router.get("/view", response_class=HTMLResponse)
@@ -60,6 +61,7 @@ def make_router(cfg: Settings) -> APIRouter:
             "battery_pct": status.battery_pct,
             "battery_charging": status.battery_charging,
             "wifi_connected": status.wifi_connected,
+            "is_online": status.is_online,
         })
 
     return router

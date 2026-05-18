@@ -3,6 +3,7 @@ import asyncio
 from dataclasses import dataclass
 from pathlib import Path
 from app.config import Settings
+from app.services.connectivity import get_is_online
 from app.services.registry import load_registry
 
 
@@ -11,6 +12,7 @@ class SystemStatus:
     battery_pct: int | None
     battery_charging: bool
     wifi_connected: bool
+    is_online: bool | None
     updates_available: int
     uptime_s: int | None
 
@@ -20,6 +22,7 @@ def read_system_status(settings: Settings) -> SystemStatus:
         battery_pct=_battery_pct(),
         battery_charging=_battery_charging(),
         wifi_connected=_wifi_connected(),
+        is_online=get_is_online(),
         updates_available=_updates_available(settings),
         uptime_s=read_uptime_s(),
     )

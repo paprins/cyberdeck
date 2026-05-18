@@ -63,6 +63,9 @@
   --color-on-error:                 #690005;
   --color-on-error-container:       #ffdad6;
 
+  /* ── Success (tactical-ops green; reserved for "operational/online" state) ── */
+  --color-success:                  #3eff8c;
+
   /* ── Typography ── */
   --font-headline: 'Space Grotesk', sans-serif;
   --font-body:     'Inter', sans-serif;

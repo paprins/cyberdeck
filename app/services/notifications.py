@@ -67,6 +67,20 @@ def effective_check_for_updates(cfg: Settings) -> bool:
     return cfg.check_for_updates
 
 
+def effective_connectivity_check(cfg: Settings) -> bool:
+    """Preference overlay on top of the env-backed default."""
+    prefs = load_preferences(cfg)
+    if "connectivity_check" in prefs:
+        return bool(prefs["connectivity_check"])
+    return cfg.connectivity_check
+
+
+def has_user_set_connectivity_check(cfg: Settings) -> bool:
+    """True if a value has been persisted. Drives boot-time auto-enable logic:
+    bootstrap only fires when the user has not yet expressed a preference."""
+    return "connectivity_check" in load_preferences(cfg)
+
+
 # ── Snapshot ──────────────────────────────────────────────────────────────────
 
 Severity = Literal["info", "success", "warning", "error"]
@@ -75,6 +89,7 @@ Severity = Literal["info", "success", "warning", "error"]
 @dataclass
 class NotificationsSnapshot:
     check_for_updates: bool
+    connectivity_check: bool
     wifi_connected: bool
     package_updates: list[dict]  # [{id, display_name, latest_version}]
     downloads: dict[str, dict]   # id -> {status, pct, display_name}
@@ -82,6 +97,8 @@ class NotificationsSnapshot:
     firmware_update_available: str | None  # version or None
     upgrade_phase: str
     upgrade_target_version: str | None
+    connectivity_check_auto_disabled_at: float | None
+    connectivity_grace_minutes: int
 
 
 def _build_downloads_map(cfg: Settings) -> dict[str, dict]:
@@ -114,7 +131,11 @@ def build_snapshot(cfg: Settings, wifi_connected: bool) -> NotificationsSnapshot
     call on every /api/system poll without latency cost. Service health is read
     from _services_cache (refreshed by services_probe_loop, not here).
     """
+    # Deferred import to break circular reference with connectivity.py.
+    from app.services.connectivity import get_auto_disabled_at
+
     cfu = effective_check_for_updates(cfg)
+    cconn = effective_connectivity_check(cfg)
     upgrade = read_status(cfg)
 
     if cfu and wifi_connected:
@@ -135,6 +156,7 @@ def build_snapshot(cfg: Settings, wifi_connected: bool) -> NotificationsSnapshot
 
     return NotificationsSnapshot(
         check_for_updates=cfu,
+        connectivity_check=cconn,
         wifi_connected=wifi_connected,
         package_updates=package_updates,
         downloads=_build_downloads_map(cfg),
@@ -142,6 +164,8 @@ def build_snapshot(cfg: Settings, wifi_connected: bool) -> NotificationsSnapshot
         firmware_update_available=firmware_version,
         upgrade_phase=upgrade.phase,
         upgrade_target_version=upgrade.target_version,
+        connectivity_check_auto_disabled_at=get_auto_disabled_at(),
+        connectivity_grace_minutes=cfg.connectivity_grace_minutes,
     )
 
 

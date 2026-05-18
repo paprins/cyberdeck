@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% from "_wifi_panel.html" import wifi_config %}
 
 {% block content %}
 {% set icons = {
@@ -207,7 +208,7 @@
         <!-- Interrupted -->
         <div class="tac-row-title" x-show="status === 'interrupted'" x-cloak>
           <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
-          <div class="font-body text-[10px] text-primary mt-[2px]"
+          <div class="font-body text-[10px] text-primary-container mt-[2px]"
                x-text="'⚠ INTERRUPTED · ' + (bytes_dl/1e9).toFixed(1) + ' GB of ' + (total/1e9).toFixed(1) + ' GB'"></div>
         </div>
 
@@ -236,7 +237,7 @@
           <template x-if="status === 'interrupted'">
             <div class="flex gap-[6px]">
               <button @click="act('/api/packages/{{ m.id }}/install')"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-primary border-primary/40">
+                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-primary-container border-primary-container/40">
                 RESUME
               </button>
               <button @click="$dispatch('confirm-delete', {id: '{{ m.id }}', name: '{{ m.display_name }}'})"
@@ -248,7 +249,7 @@
           <template x-if="status === 'checksum_mismatch'">
             <div class="flex gap-[6px]">
               <button @click="act('/api/packages/{{ m.id }}/accept-checksum')"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-primary border-primary/40">
+                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-primary-container border-primary-container/40">
                 ACCEPT
               </button>
               <button @click="act('/api/packages/{{ m.id }}/discard-checksum')"
@@ -464,7 +465,7 @@
       <div class="flex-1 lg:overflow-y-auto px-3 sm:px-5 pb-6">
 
         <!-- ── VITAL_SIGNS ────────────────────────────────────────── -->
-        <div class="flex items-center gap-2 pt-5 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-on-surface/35">
+        <div class="flex items-center gap-2 pt-5 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-primary-container">
           <span class="w-1 h-1 bg-primary-container"></span>
           VITAL_SIGNS
           <span class="flex-1 h-px bg-outline-variant/20 ml-1"></span>
@@ -592,7 +593,7 @@
         </div>
 
         <!-- ── SERVICES_LINK ──────────────────────────────────────── -->
-        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-on-surface/35">
+        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-primary-container">
           <span class="w-1 h-1 bg-primary-container"></span>
           SERVICES_LINK
           <span class="flex-1 h-px bg-outline-variant/20 ml-1"></span>
@@ -627,8 +628,72 @@
           </template>
         </div>
 
+        <!-- ── CONNECTIVITY ───────────────────────────────────────── -->
+        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-primary-container">
+          <span class="w-1 h-1 bg-primary-container"></span>
+          CONNECTIVITY
+          <span class="flex-1 h-px bg-outline-variant/20 ml-1"></span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+
+          <!-- WIFI -->
+          <div class="bg-surface-container border border-outline-variant/15 p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="material-symbols-outlined text-[14px]"
+                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
+                    :class="data.wifi_state === 'ASSOCIATED' ? 'text-tertiary' : 'text-on-surface/35'"
+                    x-text="data.wifi_state === 'ASSOCIATED' ? 'wifi' : 'wifi_off'">wifi</span>
+              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">WIFI</span>
+              <span class="ml-auto font-label text-[11px] font-bold tracking-[0.14em] uppercase"
+                    :class="data.wifi_state === 'ASSOCIATED' ? 'text-tertiary' : data.wifi_state === 'SCANNING' ? 'text-primary-container' : 'text-on-surface/40'"
+                    x-text="data.wifi_state">—</span>
+            </div>
+            <div class="font-headline text-[13px] font-bold tracking-[0.04em] text-on-surface leading-none mb-1 truncate"
+                 x-text="data.wifi_ssid || '—'">—</div>
+            <div class="font-body text-[9px] text-on-surface/40 tabular-nums tracking-[0.06em] uppercase"
+                 x-text="(data.wifi_signal_pct !== null ? data.wifi_signal_pct + '% ' : '') + (data.wifi_channel !== null ? '· CH_' + data.wifi_channel : '')">—</div>
+          </div>
+
+          <!-- LAN -->
+          <div class="bg-surface-container border border-outline-variant/15 p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="material-symbols-outlined text-[14px]"
+                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
+                    :class="data.lan_state === 'LINKED' ? 'text-tertiary' : 'text-on-surface/35'">lan</span>
+              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">LAN</span>
+              <span class="ml-auto font-label text-[11px] font-bold tracking-[0.14em] uppercase"
+                    :class="data.lan_state === 'LINKED' ? 'text-tertiary' : 'text-on-surface/40'"
+                    x-text="data.lan_state">—</span>
+            </div>
+            <div class="font-headline text-[13px] font-bold tracking-[0.04em] text-on-surface leading-none mb-1"
+                 x-text="data.lan_iface || '—'">—</div>
+            <div class="font-body text-[9px] text-on-surface/40 tabular-nums tracking-[0.06em] uppercase"
+                 x-text="data.lan_ip || 'NO_IP'">—</div>
+          </div>
+
+          <!-- WAN -->
+          <div class="bg-surface-container border border-outline-variant/15 p-3">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="material-symbols-outlined text-[14px]"
+                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
+                    :class="data.wan_state === 'REACHABLE' ? 'text-tertiary' : data.wan_state === 'UNREACHABLE' ? 'text-error' : 'text-on-surface/35'"
+                    x-text="data.wan_state === 'REACHABLE' ? 'public' : 'public_off'">public</span>
+              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">WAN</span>
+              <span class="ml-auto font-label text-[11px] font-bold tracking-[0.14em] uppercase"
+                    :class="data.wan_state === 'REACHABLE' ? 'text-tertiary' : data.wan_state === 'UNREACHABLE' ? 'text-error' : 'text-on-surface/40'"
+                    x-text="data.wan_state">—</span>
+            </div>
+            <div class="font-headline text-[13px] font-bold tracking-[0.04em] text-on-surface leading-none mb-1 truncate"
+                 x-text="data.wan_target || '—'">—</div>
+            <div class="font-body text-[9px] text-on-surface/40 tabular-nums tracking-[0.06em] uppercase"
+                 x-text="(data.wan_latency_ms !== null ? data.wan_latency_ms + ' MS · ' : '') + (data.wan_checked_at ? 'CHK_' + Math.max(0, Math.round((Date.now()/1000 - data.wan_checked_at))) + 'S_AGO' : 'NO_DATA')">—</div>
+          </div>
+
+        </div>
+
         <!-- ── HOST_TELEMETRY ─────────────────────────────────────── -->
-        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-on-surface/35">
+        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-primary-container">
           <span class="w-1 h-1 bg-primary-container"></span>
           HOST_TELEMETRY
           <span class="flex-1 h-px bg-outline-variant/20 ml-1"></span>
@@ -723,7 +788,7 @@
     <!-- Settings rows -->
     <div class="flex-1 lg:overflow-y-auto px-3 sm:px-4 pb-4">
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/25">NOTIFICATIONS</div>
+      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">NOTIFICATIONS</div>
 
       <div class="tac-row gap-3 px-3 py-[11px] mb-1 border border-outline-variant/15"
            x-data="{
@@ -767,16 +832,58 @@
         </div>
       </div>
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/25">DISPLAY</div>
+      <div class="tac-row gap-3 px-3 py-[11px] mb-1 border border-outline-variant/15"
+           x-data="{
+             enabled: {{ connectivity_check | tojson }},
+             saving: false,
+             error: '',
+             async toggle() {
+               if (this.saving) return;
+               const next = !this.enabled;
+               this.saving = true; this.error = '';
+               try {
+                 const r = await fetch('/api/settings/connectivity-check', {
+                   method: 'POST',
+                   headers: {'Content-Type': 'application/json'},
+                   body: JSON.stringify({enabled: next}),
+                 });
+                 if (r.status === 204) this.enabled = next;
+                 else this.error = 'SAVE_FAILED';
+               } catch(e) { this.error = 'NETWORK_ERROR'; }
+               finally { this.saving = false; setTimeout(() => this.error = '', 3000); }
+             }
+           }">
+        <span class="material-symbols-outlined text-[18px] text-on-surface flex-shrink-0"
+              style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">public</span>
+        <div class="tac-row-title">
+          <div class="font-headline text-[11px] text-on-surface tracking-[0.06em]">CONNECTIVITY_CHECK</div>
+          <div class="font-body text-[9px] text-on-surface/50 mt-[2px]">
+            Periodically check if internet is reachable. Auto-disables after sustained loss.
+            <span x-show="error" x-cloak class="text-error ml-2" x-text="error"></span>
+          </div>
+        </div>
+        <div class="tac-row-actions">
+          <button @click="toggle()"
+                  :disabled="saving"
+                  :class="enabled
+                    ? 'text-tertiary border-tertiary/50'
+                    : 'text-on-surface/40 border-outline-variant/30'"
+                  class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border tracking-[0.06em] hover:bg-surface-container">
+            <span x-text="enabled ? 'ENABLED' : 'DISABLED'"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">DISPLAY</div>
 
       {{ locked_row('brightness_high', 'DISPLAY_BRIGHTNESS', 'Adjust screen brightness (10–100%)') }}
       {{ locked_row('timer', 'AUTO_DIM_TIMEOUT', 'Screen auto-dim delay in seconds') }}
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/25">NETWORK</div>
+      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">NETWORK</div>
 
-      {{ locked_row('wifi', 'WIFI_NETWORK', 'Configure wireless network connection') }}
+      {{ wifi_config(embedded=true) }}
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/25">LIBRARIES</div>
+      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">LIBRARIES</div>
 
       <script>
         window.__libraries = {{ libraries | tojson }};
@@ -950,7 +1057,7 @@
 
       </div>
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/25">FIRMWARE</div>
+      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">FIRMWARE</div>
 
       <script>
         window.__upgradeInitial = {
@@ -1127,7 +1234,7 @@
         </div>
       </div>
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/25">SYSTEM</div>
+      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">SYSTEM</div>
 
       {{ locked_row('language',    'LANGUAGE',     'System display language') }}
       {{ locked_row('schedule',    'TIMEZONE',     'Device timezone and clock source') }}

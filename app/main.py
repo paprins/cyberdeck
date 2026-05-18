@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pathlib import Path
 from app.config import Settings
+from app.services.connectivity import connectivity_probe_loop, make_default_probe
 from app.services.notifications import services_probe_loop
 from app.services.registry import load_registry
 from app.services.packages import init_kiwix_library
@@ -27,14 +28,19 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             d.mkdir(parents=True, exist_ok=True)
         init_kiwix_library(cfg)
         probe_task = asyncio.create_task(services_probe_loop(cfg))
+        connectivity_task = asyncio.create_task(
+            connectivity_probe_loop(cfg, make_default_probe(cfg))
+        )
         try:
             yield
         finally:
             probe_task.cancel()
-            try:
-                await probe_task
-            except asyncio.CancelledError:
-                pass
+            connectivity_task.cancel()
+            for task in (probe_task, connectivity_task):
+                try:
+                    await task
+                except asyncio.CancelledError:
+                    pass
             await http_client.aclose()
 
     app = FastAPI(title="Cyberdeck", lifespan=lifespan)

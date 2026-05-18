@@ -5,6 +5,7 @@ from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from app.config import Settings
 import app.services.system as sys_svc
+from app.services.connectivity import get_connectivity_snapshot
 from app.services.diagnostics import read_diagnostics
 from app.services.notifications import (
     build_snapshot,
@@ -28,6 +29,8 @@ def make_router(cfg: Settings) -> APIRouter:
             "battery_pct": status.battery_pct,
             "battery_charging": status.battery_charging,
             "wifi_connected": status.wifi_connected,
+            "is_online": status.is_online,
+            "connectivity": {**get_connectivity_snapshot(), "target": cfg.connectivity_target},
             "updates_available": status.updates_available,
             "uptime_s": status.uptime_s,
             "notifications": asdict(snapshot),

@@ -1,15 +1,18 @@
-<!-- ── WiFi panel ── -->
-<div
-  x-show="wifi_panel_open"
-  x-cloak
-  @keydown.escape.window="wifi_panel_open = false"
-  class="fixed inset-0 z-40"
->
-  <div class="absolute inset-0 bg-background/60" @click="wifi_panel_open = false"></div>
-
+{#
+  wifi_config(embedded) — the wifi scan/connect/forget UI.
+  Rendered in two places: the topbar popover (embedded=false) and inline on
+  the Settings page (embedded=true). The connect modal lives once at the
+  bottom of this file and is reached via the `wifi-modal-open` window event,
+  so both instances share it.
+#}
+{% macro wifi_config(embedded=false) %}
   <div
+    {% if embedded %}
+    class="bg-surface-container border border-outline-variant/15"
+    {% else %}
     class="absolute top-16 inset-x-3 sm:inset-x-auto sm:right-6 sm:w-96 max-h-[calc(100dvh-5rem)] bg-surface-container border border-outline-variant/30 overflow-y-auto"
     @click.stop
+    {% endif %}
     x-data="{
       networks: [],
       connected_ssid: null,
@@ -19,6 +22,10 @@
       hiddenSsid: '',
       _poll: null,
       init() {
+        {% if embedded %}
+        this.load();
+        this._poll = setInterval(() => this.load(), 8000);
+        {% else %}
         this.$watch('wifi_panel_open', val => {
           if (val) {
             this.load();
@@ -27,6 +34,7 @@
             if (this._poll) clearInterval(this._poll);
           }
         });
+        {% endif %}
       },
       async load() {
         if (this.loading) return;
@@ -89,7 +97,11 @@
   >
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/20">
+      {% if embedded %}
+      <div class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">AVAILABLE_NETWORKS</div>
+      {% else %}
       <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-on-surface">WIFI_NETWORKS</div>
+      {% endif %}
       <div class="flex items-center gap-1">
         <button @click="load()" :disabled="loading"
                 :class="loading ? 'opacity-40 cursor-not-allowed' : 'hover:text-primary'"
@@ -97,11 +109,13 @@
           <span class="material-symbols-outlined text-[18px]"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">refresh</span>
         </button>
+        {% if not embedded %}
         <button @click="wifi_panel_open = false"
                 class="tac-icon-btn text-on-surface/40 hover:text-on-surface -my-2">
           <span class="material-symbols-outlined text-[18px]"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">close</span>
         </button>
+        {% endif %}
       </div>
     </div>
 
@@ -191,9 +205,20 @@
       </form>
     </div>
   </div>
+{% endmacro %}
+
+<!-- ── WiFi popover (topbar icon target) ── -->
+<div
+  x-show="wifi_panel_open"
+  x-cloak
+  @keydown.escape.window="wifi_panel_open = false"
+  class="fixed inset-0 z-40"
+>
+  <div class="absolute inset-0 bg-background/60" @click="wifi_panel_open = false"></div>
+  {{ wifi_config(embedded=false) }}
 </div>
 
-<!-- ── Connect modal ── -->
+<!-- ── Connect modal (shared by popover and inline instances) ── -->
 <div
   x-data="{
     open: false,

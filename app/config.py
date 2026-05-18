@@ -11,6 +11,10 @@ class Settings(BaseSettings):
     github_repo: str = ""
     upgrade_versions_keep: int = 3
     check_for_updates: bool = True
+    connectivity_check: bool = False
+    connectivity_poll_seconds: int = 60
+    connectivity_grace_minutes: int = 10
+    connectivity_target: str = "1.1.1.1:53"
 
     model_config = SettingsConfigDict(env_prefix="CYBERDECK_")
 
