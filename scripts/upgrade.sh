@@ -45,6 +45,7 @@ fi
 _state "extracting" "unpacking tarball"
 mkdir -p "${TARGET_DIR}"
 tar -xzf "${TARBALL}" -C "${TARGET_DIR}" --strip-components=1 || _fail "extract_failed"
+chmod +x "${TARGET_DIR}"/scripts/*.sh 2>/dev/null || true
 
 # 3. Build venv with bundled wheels
 _state "building_venv" "creating virtualenv"
@@ -57,8 +58,9 @@ fi
 WHEEL_DIR="${TARGET_DIR}/dist/wheels"
 PIP="${TARGET_DIR}/.venv/bin/pip"
 if [[ -d "${WHEEL_DIR}" ]]; then
+    # Install the prebuilt wheel by name (avoids PEP 517 build → no hatchling needed offline)
     "${PIP}" install --no-index --find-links "${WHEEL_DIR}" \
-        "${TARGET_DIR}" || _fail "pip_install_offline_failed"
+        "cyberdeck==${NEW_VERSION}" || _fail "pip_install_offline_failed"
 else
     "${PIP}" install -e "${TARGET_DIR}" || _fail "pip_install_failed"
 fi

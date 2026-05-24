@@ -264,15 +264,29 @@ async def start_upgrade(cfg: Settings, req: InstallRequest) -> None:
         raise UpgradeError(f"upgrade.sh not found at {upgrade_sh}")
 
     log_path = cfg.upgrade_dir / "upgrade.log"
-    with open(log_path, "a") as log_fh:
-        _popen(
-            [str(upgrade_sh), str(tarball_path), str(sig_path), req.version],
-            start_new_session=True,
-            stdin=subprocess.DEVNULL,
-            stdout=log_fh,
-            stderr=subprocess.STDOUT,
-            close_fds=True,
-        )
+    try:
+        with open(log_path, "a") as log_fh:
+            _popen(
+                [str(upgrade_sh), str(tarball_path), str(sig_path), req.version],
+                start_new_session=True,
+                stdin=subprocess.DEVNULL,
+                stdout=log_fh,
+                stderr=subprocess.STDOUT,
+                close_fds=True,
+            )
+    except OSError as exc:
+        # Popen failed before the script could write its own state (e.g. EACCES on upgrade.sh).
+        # Mark failed so the UI can dismiss + retry instead of being stuck on "downloading".
+        _write_status(cfg, UpgradeStatus(
+            phase="failed",
+            current_version=cur,
+            target_version=req.version,
+            channel=req.channel,
+            started_at=status.started_at,
+            finished_at=datetime.now(timezone.utc),
+            message=f"spawn_failed: {exc}",
+        ))
+        raise UpgradeError(f"failed to spawn upgrade script: {exc}") from exc
 
 
 def _file_uri_to_path(uri: str) -> Path:

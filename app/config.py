@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     kiwix_port: int = 8080
     mbtiles_port: int = 8081
     install_root: Path = Path("/opt/cyberdeck")
-    github_repo: str = ""
+    github_repo: str = "paprins/cyberdeck"
     upgrade_versions_keep: int = 3
     check_for_updates: bool = True
     connectivity_check: bool = False

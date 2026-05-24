@@ -203,6 +203,35 @@ async def test_start_upgrade_blocks_when_package_download_active(cfg, monkeypatc
         pkg_svc._active_tasks.pop("fake", None)
 
 
+async def test_start_upgrade_marks_failed_when_spawn_fails(cfg, monkeypatch):
+    # Simulate a non-executable upgrade.sh — Popen raises PermissionError.
+    current = cfg.install_root / "v0.0.4"
+    current.mkdir()
+    (current / "scripts").mkdir()
+    (current / "scripts" / "upgrade.sh").write_text("#!/bin/sh\n")  # not chmod +x
+    (cfg.install_root / "current").symlink_to(current)
+
+    def boom(*args, **kwargs):
+        raise PermissionError(13, "Permission denied", str(current / "scripts" / "upgrade.sh"))
+    monkeypatch.setattr(upgrade_svc, "_popen", boom)
+
+    # Stub the download so we exercise only the spawn path.
+    async def fake_dl(*a, **k): return None
+    monkeypatch.setattr(upgrade_svc, "_download", fake_dl)
+
+    from app.models.upgrade import UpgradeError
+    with pytest.raises(UpgradeError):
+        await upgrade_svc.start_upgrade(cfg, InstallRequest(
+            version="0.0.5", channel=UpgradeChannel.ONLINE,
+            tarball_url="http://x/t.tar.gz", signature_url="http://x/t.tar.gz.minisig",
+        ))
+
+    # State must be 'failed', not stuck on 'downloading' — otherwise retries are blocked.
+    status = upgrade_svc.read_status(cfg)
+    assert status.phase == "failed"
+    assert "spawn_failed" in (status.message or "")
+
+
 async def test_start_upgrade_blocks_downgrade(cfg):
     target = cfg.install_root / "v3.0.0"
     target.mkdir()

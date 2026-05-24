@@ -198,6 +198,7 @@ else
     mkdir -p "${TARGET_DIR}"
     tar -xzf "$TARBALL" -C "${TARGET_DIR}" --strip-components=1
 fi
+chmod +x "${TARGET_DIR}"/scripts/*.sh 2>/dev/null || true
 
 # ── pyenv + Python (.python-version sourced from TARGET_DIR) ──
 export PYENV_ROOT="/opt/pyenv"
