@@ -10,7 +10,7 @@ from app.config import Settings
 from app.services.connectivity import connectivity_probe_loop, make_default_probe
 from app.services.notifications import services_probe_loop
 from app.services.registry import load_registry
-from app.services.packages import init_kiwix_library
+from app.services.packages import init_kiwix_library, reconcile_kiwix_library
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -24,9 +24,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         for d in (cfg.zim_dir, cfg.maps_dir, cfg.downloads_dir,
-                  cfg.registry_path.parent, cfg.images_dir):
+                  cfg.registry_path.parent, cfg.images_dir, cfg.content_dir,
+                  cfg.cache_dir):
             d.mkdir(parents=True, exist_ok=True)
         init_kiwix_library(cfg)
+        reconcile_kiwix_library(cfg)
         probe_task = asyncio.create_task(services_probe_loop(cfg))
         connectivity_task = asyncio.create_task(
             connectivity_probe_loop(cfg, make_default_probe(cfg))
@@ -57,6 +59,11 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         StaticFiles(directory=cfg.data_dir / "static", check_dir=False),
         name="data-static",
     )
+    app.mount(
+        "/data-cache",
+        StaticFiles(directory=cfg.cache_dir, check_dir=False),
+        name="data-cache",
+    )
 
     from app.routers import system as system_router
     app.include_router(system_router.make_router(cfg))
@@ -81,6 +88,12 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     from app.routers import libraries as libraries_router
     app.include_router(libraries_router.make_router(cfg))
+
+    from app.routers import content as content_router
+    app.include_router(content_router.make_router(cfg))
+
+    from app.routers import map_viewer as map_viewer_router
+    app.include_router(map_viewer_router.make_router(cfg))
 
     from app.routers import proxy as proxy_router
     app.include_router(proxy_router.make_router(cfg))

@@ -1,7 +1,6 @@
 from __future__ import annotations
 from fastapi import APIRouter, Response
 from fastapi.responses import JSONResponse
-import httpx
 
 from app.config import Settings
 from app.services.packages import (
@@ -10,7 +9,6 @@ from app.services.packages import (
     accept_checksum_mismatch,
     activate_module,
     cancel_download,
-    check_for_updates,
     deactivate_module,
     discard_checksum_mismatch,
     get_download_status,
@@ -22,14 +20,6 @@ from app.services.registry import load_registry
 
 def make_router(cfg: Settings) -> APIRouter:
     router = APIRouter()
-
-    @router.post("/api/packages/check-updates")
-    async def check_updates_endpoint():
-        try:
-            count = await check_for_updates(cfg)
-        except (httpx.RequestError, httpx.HTTPStatusError) as e:
-            return JSONResponse({"error": str(e)}, status_code=502)
-        return {"updated": count}
 
     @router.get("/api/packages/active-download")
     async def active_download():

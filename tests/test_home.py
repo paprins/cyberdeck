@@ -42,7 +42,7 @@ async def test_home_import_module_card_always_present(client):
 
 async def test_home_shows_active_module_name(client, tmp_settings):
     reg = Registry(
-        update_server="https://example.com/manifest.json",
+        
         modules=[
             Module(
                 id="medical-wikimed", display_name="Medical Wiki", category="medical",
@@ -58,7 +58,7 @@ async def test_home_shows_active_module_name(client, tmp_settings):
 
 async def test_home_shows_module_size(client, tmp_settings):
     reg = Registry(
-        update_server="https://example.com/manifest.json",
+        
         modules=[
             Module(
                 id="medical-wikimed", display_name="Medical Wiki", category="medical",
@@ -74,10 +74,10 @@ async def test_home_shows_module_size(client, tmp_settings):
 
 async def test_home_maps_module_has_viewer_url(client, tmp_settings):
     reg = Registry(
-        update_server="https://example.com/manifest.json",
+        
         modules=[
             Module(
-                id="maps-world", display_name="Maps", category="maps",
+                id="maps-world", display_name="Maps", category="maps", kind="mbtiles",
                 description="OSM", latest_version="2024-01",
                 size_gb=10, checksum="sha256:abc", active=True,
             )
@@ -85,12 +85,13 @@ async def test_home_maps_module_has_viewer_url(client, tmp_settings):
     )
     save_registry(tmp_settings, reg)
     r = await client.get("/")
-    assert 'href="/view?url=/maps/' in r.text
+    # mbtiles modules link to the in-cyberdeck map viewer, not the iframe.
+    assert 'href="/map/maps-world"' in r.text
 
 
 async def test_home_medical_module_has_viewer_url(client, tmp_settings):
     reg = Registry(
-        update_server="https://example.com/manifest.json",
+        
         modules=[
             Module(
                 id="medical-wikimed", display_name="Medical", category="medical",
@@ -113,7 +114,7 @@ async def test_view_route_renders_iframe(client):
 
 async def test_home_inactive_modules_not_shown(client, tmp_settings):
     reg = Registry(
-        update_server="https://example.com/manifest.json",
+        
         modules=[
             Module(
                 id="medical-wikimed", display_name="Secret Module", category="medical",

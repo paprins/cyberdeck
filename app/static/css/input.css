@@ -206,4 +206,164 @@
     .tac-row-title { flex: 1 1 0%; min-width: 0; }
     .tac-row-actions { flex-basis: auto; }
   }
+
+  /* Hand-rolled "prose" styles for server-rendered Markdown in cyberdeck chrome.
+     Stays tactical: sharp corners, signal-orange links, uppercase headings,
+     no decorative effects. The .cyberdeck-markdown root scopes all rules. */
+  .cyberdeck-markdown h1,
+  .cyberdeck-markdown h2,
+  .cyberdeck-markdown h3,
+  .cyberdeck-markdown h4 {
+    font-family: var(--font-headline, "Space Grotesk"), sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-on-surface);
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    line-height: 1.2;
+  }
+  .cyberdeck-markdown h1 { font-size: 1.5rem; }
+  .cyberdeck-markdown h2 { font-size: 1.25rem; }
+  .cyberdeck-markdown h3 { font-size: 1.05rem; color: var(--color-primary); }
+  .cyberdeck-markdown h4 { font-size: 0.9rem; color: var(--color-on-surface); opacity: 0.75; }
+
+  .cyberdeck-markdown p,
+  .cyberdeck-markdown ul,
+  .cyberdeck-markdown ol,
+  .cyberdeck-markdown blockquote {
+    margin-bottom: 1em;
+  }
+
+  .cyberdeck-markdown a {
+    color: var(--color-primary-container);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .cyberdeck-markdown a:hover { color: var(--color-primary); }
+
+  .cyberdeck-markdown ul { list-style: disc; padding-left: 1.4em; }
+  .cyberdeck-markdown ol { list-style: decimal; padding-left: 1.4em; }
+  .cyberdeck-markdown li { margin-bottom: 0.25em; }
+
+  .cyberdeck-markdown code {
+    font-family: ui-monospace, "SF Mono", Menlo, Monaco, "Courier New", monospace;
+    font-size: 0.85em;
+    background: var(--color-surface-container-high);
+    padding: 0.1em 0.4em;
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 30%, transparent);
+  }
+  .cyberdeck-markdown pre {
+    background: var(--color-surface-container-lowest);
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 30%, transparent);
+    padding: 0.75em 1em;
+    overflow-x: auto;
+    margin-bottom: 1em;
+  }
+  .cyberdeck-markdown pre code {
+    background: transparent;
+    border: 0;
+    padding: 0;
+  }
+
+  .cyberdeck-markdown blockquote {
+    border-left: 2px solid var(--color-primary-container);
+    padding-left: 1em;
+    color: color-mix(in srgb, var(--color-on-surface) 70%, transparent);
+  }
+
+  .cyberdeck-markdown table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1em;
+    font-size: 0.9em;
+  }
+  .cyberdeck-markdown th,
+  .cyberdeck-markdown td {
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 30%, transparent);
+    padding: 0.5em 0.75em;
+    text-align: left;
+  }
+  .cyberdeck-markdown th {
+    background: var(--color-surface-container);
+    font-family: var(--font-headline, "Space Grotesk"), sans-serif;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.78em;
+    color: var(--color-on-surface);
+  }
+
+  .cyberdeck-markdown img {
+    max-width: 100%;
+    height: auto;
+    margin: 1em 0;
+  }
+
+  .cyberdeck-markdown hr {
+    border: 0;
+    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 30%, transparent);
+    margin: 2em 0;
+  }
+
+  /* MapLibre control overrides — flatten the consumer-mapping defaults
+     (rounded pills, drop shadows, pulsing dots) into tactical chrome:
+     sharp corners, tonal surfaces, no shadows. */
+  .maplibregl-ctrl-group,
+  .maplibregl-ctrl-group button {
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: var(--color-surface-container) !important;
+    border: 1px solid color-mix(in srgb, var(--color-outline-variant) 30%, transparent) !important;
+  }
+  .maplibregl-ctrl-group button + button {
+    border-top: 1px solid color-mix(in srgb, var(--color-outline-variant) 30%, transparent) !important;
+  }
+  .maplibregl-ctrl-group button:hover {
+    background-color: var(--color-surface-container-high) !important;
+  }
+  /* MapLibre's default icons are dark SVGs invisible on our dark surface.
+     Invert so they read as light foreground icons. */
+  .maplibregl-ctrl-icon {
+    filter: invert(1) !important;
+  }
+  .maplibregl-ctrl-scale {
+    background-color: color-mix(in srgb, var(--color-surface) 70%, transparent) !important;
+    border: 1px solid var(--color-outline-variant) !important;
+    border-top: none !important;
+    color: var(--color-on-surface) !important;
+    font-family: var(--font-label) !important;
+    font-size: 10px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    padding: 2px 6px !important;
+  }
+  .maplibregl-ctrl-attrib {
+    background-color: color-mix(in srgb, var(--color-surface) 80%, transparent) !important;
+    color: var(--color-on-surface-variant) !important;
+    font-family: var(--font-label) !important;
+    font-size: 9px !important;
+    border-radius: 0 !important;
+  }
+  .maplibregl-ctrl-attrib a {
+    color: var(--color-primary) !important;
+  }
+  /* Suppress the GeolocateControl pulsing-dot animation — power awareness
+     principle (no animations that burn CPU/GPU). The static dot remains. */
+  .maplibregl-user-location-dot::before {
+    animation: none !important;
+  }
+
+  /* Single tactical marker placed at the last tapped (or jumped-to) coord
+     in the map viewer. Sharp square in signal orange with a surface-colored
+     border for legibility on both light landmass and dark water fills.
+     pointer-events: none so the next tap passes through to the canvas. */
+  .cd-map-point {
+    width: 12px;
+    height: 12px;
+    background-color: var(--color-primary-container);
+    border: 1.5px solid var(--color-surface);
+    box-sizing: border-box;
+    pointer-events: none;
+  }
 }

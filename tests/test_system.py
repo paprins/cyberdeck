@@ -85,7 +85,7 @@ async def test_system_updates_available_counts_modules_with_updates(client, tmp_
     from app.services.registry import save_registry
     from app.models.registry import Registry, Module
     reg = Registry(
-        update_server="https://example.com/manifest.json",
+        
         modules=[
             Module(
                 id="maps-world", display_name="Maps", category="maps",

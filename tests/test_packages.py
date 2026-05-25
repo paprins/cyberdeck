@@ -31,10 +31,7 @@ def _mod(**overrides) -> Module:
 
 def _seed(tmp_settings, modules=None):
     tmp_settings.registry_path.parent.mkdir(parents=True, exist_ok=True)
-    reg = Registry(
-        update_server="https://example.com/manifest.json",
-        modules=modules or [],
-    )
+    reg = Registry(modules=modules or [])
     tmp_settings.registry_path.write_text(reg.model_dump_json())
 
 
@@ -89,7 +86,7 @@ def test_get_download_status_installed(tmp_settings):
 
 
 def test_get_download_status_maps_uses_mbtiles(tmp_settings):
-    m = _mod(id="maps-world", category="maps")
+    m = _mod(id="maps-world", category="maps", kind="mbtiles")
     mbt = tmp_settings.maps_dir / "maps-world.mbtiles"
     mbt.parent.mkdir(parents=True, exist_ok=True)
     mbt.write_bytes(b"tiles")
@@ -153,15 +150,145 @@ async def test_uninstall_deletes_part_file_if_present(tmp_settings):
     assert not part.exists()
 
 
-async def test_uninstall_clears_registry_fields(tmp_settings):
+# ── _resolve_bundled_image ──────────────────────────────────────────────────
+
+
+def _static_mod(**overrides) -> Module:
+    defaults = dict(
+        id="first-aid",
+        display_name="First Aid",
+        category="medical",
+        description="",
+        latest_version="1.0",
+        size_gb=0.0,
+        kind="static",
+        signature_url="https://example.com/x.minisig",
+        download_url="https://example.com/x.tar.gz",
+        entry="index.md",
+    )
+    defaults.update(overrides)
+    return Module(**defaults)
+
+
+def test_bundled_image_skipped_when_http_already_cached(tmp_settings):
+    m = _static_mod(image="/data-cache/first-aid/cover.png")
+    final_dir = tmp_settings.content_dir / "first-aid"
+    final_dir.mkdir(parents=True)
+    (final_dir / "card.png").write_bytes(b"x")
+    assert pkg_service._resolve_bundled_image(m, tmp_settings, final_dir) is None
+
+
+def test_bundled_image_uses_card_png_by_default(tmp_settings):
+    m = _static_mod()
+    final_dir = tmp_settings.content_dir / "first-aid"
+    final_dir.mkdir(parents=True)
+    (final_dir / "card.png").write_bytes(b"data")
+    url = pkg_service._resolve_bundled_image(m, tmp_settings, final_dir)
+    # No copy — URL points at the extracted file via the existing /content/ route.
+    assert url == "/content/first-aid/card.png"
+    assert not (tmp_settings.cache_dir / "first-aid").exists()
+
+
+@pytest.mark.parametrize("ext", ["png", "jpg", "webp", "gif"])
+def test_bundled_image_default_supports_each_extension(tmp_settings, ext):
+    m = _static_mod()
+    final_dir = tmp_settings.content_dir / "first-aid"
+    final_dir.mkdir(parents=True)
+    (final_dir / f"card.{ext}").write_bytes(b"data")
+    url = pkg_service._resolve_bundled_image(m, tmp_settings, final_dir)
+    assert url == f"/content/first-aid/card.{ext}"
+
+
+def test_bundled_image_preserves_jpeg_extension(tmp_settings):
+    """No jpeg→jpg munging; the URL matches the tarball filename verbatim."""
+    m = _static_mod()
+    final_dir = tmp_settings.content_dir / "first-aid"
+    final_dir.mkdir(parents=True)
+    (final_dir / "card.jpeg").write_bytes(b"data")
+    url = pkg_service._resolve_bundled_image(m, tmp_settings, final_dir)
+    assert url == "/content/first-aid/card.jpeg"
+
+
+def test_bundled_image_no_card_returns_none(tmp_settings):
+    m = _static_mod()
+    final_dir = tmp_settings.content_dir / "first-aid"
+    final_dir.mkdir(parents=True)
+    (final_dir / "index.md").write_text("hello")
+    assert pkg_service._resolve_bundled_image(m, tmp_settings, final_dir) is None
+
+
+def test_bundled_image_unsupported_extension_ignored(tmp_settings):
+    m = _static_mod()
+    final_dir = tmp_settings.content_dir / "first-aid"
+    final_dir.mkdir(parents=True)
+    (final_dir / "card.bmp").write_bytes(b"data")
+    assert pkg_service._resolve_bundled_image(m, tmp_settings, final_dir) is None
+
+
+def test_bundled_image_uses_image_path_preserving_relative_layout(tmp_settings):
+    """image_path produces a URL with the same relative path as in the tarball."""
+    m = _static_mod(image_path="images/logo.png")
+    final_dir = tmp_settings.content_dir / "first-aid"
+    (final_dir / "images").mkdir(parents=True)
+    (final_dir / "images" / "logo.png").write_bytes(b"logo-bytes")
+    # A card.png at the root must NOT win when image_path is explicit.
+    (final_dir / "card.png").write_bytes(b"card-bytes")
+    url = pkg_service._resolve_bundled_image(m, tmp_settings, final_dir)
+    assert url == "/content/first-aid/images/logo.png"
+    # No copy at all.
+    assert not (tmp_settings.cache_dir / "first-aid").exists()
+
+
+def test_bundled_image_path_traversal_rejected(tmp_settings):
+    m = _static_mod(image_path="../../etc/passwd")
+    final_dir = tmp_settings.content_dir / "first-aid"
+    final_dir.mkdir(parents=True)
+    # Even if the resolved file existed, the guard refuses to leave final_dir.
+    assert pkg_service._resolve_bundled_image(m, tmp_settings, final_dir) is None
+
+
+def test_bundled_image_path_missing_file_returns_none(tmp_settings):
+    m = _static_mod(image_path="images/logo.png")
+    final_dir = tmp_settings.content_dir / "first-aid"
+    final_dir.mkdir(parents=True)
+    assert pkg_service._resolve_bundled_image(m, tmp_settings, final_dir) is None
+
+
+def test_mark_installed_writes_image_when_passed(tmp_settings):
+    m = _static_mod()
+    _seed(tmp_settings, [m])
+    pkg_service._mark_installed(m, tmp_settings, checksum=None, image="/content/first-aid/card.png")
+    reg = load_registry(tmp_settings)
+    saved = reg.modules[0]
+    assert saved.installed_version == "1.0"
+    assert saved.image == "/content/first-aid/card.png"
+
+
+def test_mark_installed_keeps_existing_image_when_none_passed(tmp_settings):
+    m = _static_mod(image="/content/first-aid/card.png")
+    _seed(tmp_settings, [m])
+    pkg_service._mark_installed(m, tmp_settings, checksum=None)
+    reg = load_registry(tmp_settings)
+    assert reg.modules[0].image == "/content/first-aid/card.png"
+
+
+async def test_uninstall_wipes_cache_dir(tmp_settings):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
+    _seed(tmp_settings, [m])
+    cache = tmp_settings.cache_dir / m.id
+    (cache / "images").mkdir(parents=True)
+    (cache / "card.png").write_bytes(b"x")
+    (cache / "images" / "logo.jpg").write_bytes(b"y")
+    await pkg_service.uninstall_module(m, tmp_settings)
+    assert not cache.exists()
+
+
+async def test_uninstall_removes_registry_row(tmp_settings):
     m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
     _seed(tmp_settings, [m])
     await pkg_service.uninstall_module(m, tmp_settings)
     reg = load_registry(tmp_settings)
-    updated = reg.modules[0]
-    assert updated.installed_version is None
-    assert updated.installed_checksum is None
-    assert updated.active is False
+    assert reg.modules == []
 
 
 async def test_accept_checksum_mismatch_installs_file(tmp_settings, monkeypatch):
@@ -208,6 +335,14 @@ async def test_discard_checksum_mismatch_deletes_files(tmp_settings):
 
     assert not part.exists()
     assert not mismatch_file.exists()
+
+
+async def test_discard_checksum_mismatch_removes_registry_row(tmp_settings):
+    m = _mod()
+    _seed(tmp_settings, [m])
+    await pkg_service.discard_checksum_mismatch(m, tmp_settings)
+    reg = load_registry(tmp_settings)
+    assert reg.modules == []
 
 
 async def test_uninstall_clears_mismatch_file(tmp_settings):
@@ -427,70 +562,100 @@ async def test_download_does_not_write_mismatch_on_correct_checksum(tmp_settings
     assert not mismatch.exists(), ".mismatch must not exist on successful download"
 
 
-# ── check_for_updates ─────────────────────────────────────────────────────────
+# ── _finalize_static (integration) ────────────────────────────────────────────
 
-async def test_check_for_updates_merges_manifest(tmp_settings, monkeypatch):
-    _seed(tmp_settings)
-    manifest = [
-        {
-            "id": "medical-wikimed",
-            "display_name": "WikiMed",
-            "category": "medical",
-            "description": "Medical",
-            "latest_version": "2024-10",
-            "size_gb": 0.8,
-            "checksum": "sha256:abc",
-            "download_url": "https://example.com/wikimed.zim",
-        }
-    ]
+
+async def test_finalize_static_extracts_and_marks_installed(tmp_settings, monkeypatch):
+    import io, tarfile
+    from app.services import signing
+    from app.services import packages as pkg
+    # Real pubkey path so the SignatureError("public key not found") branch is skipped.
+    pubkey = tmp_settings.data_dir / "release.pub"
+    pubkey.parent.mkdir(parents=True, exist_ok=True)
+    pubkey.write_text("dummy")
+    tmp_settings.release_pubkey_path = pubkey
+
+    module = _mod(id="my-pkg", kind="static", checksum=None,
+                  signature_url="https://github.com/o/r/x.minisig",
+                  download_url="https://github.com/o/r/x.tar.gz",
+                  latest_version="1.0")
+    _seed(tmp_settings, modules=[module])
+
+    # Build a real tarball at the .part location.
+    part = tmp_settings.downloads_dir / "my-pkg.part"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(part, "w:gz") as tar:
+        data = b"# hello"
+        info = tarfile.TarInfo(name="index.md"); info.size = len(data)
+        tar.addfile(info, io.BytesIO(data))
+
+    # Stub the signature download and minisign call.
+    import subprocess
+    class _Resp:
+        content = b"sigbytes"
+        def raise_for_status(self): pass
+    class _FakeClient:
+        def __init__(self, *a, **kw): pass
+        async def __aenter__(self): return self
+        async def __aexit__(self, *a): pass
+        async def get(self, url): return _Resp()
+    monkeypatch.setattr(pkg.httpx, "AsyncClient", _FakeClient)
+    monkeypatch.setattr(signing, "_run_minisign",
+                        lambda args: subprocess.CompletedProcess(args=[], returncode=0,
+                                stdout="Trusted comment: cyberdeck content my-pkg v1.0\n", stderr=""))
+
+    await pkg._finalize_static(module, tmp_settings, part)
+
+    final = tmp_settings.content_dir / "my-pkg"
+    assert (final / "index.md").read_text() == "# hello"
+    assert not part.exists()
+    reg = load_registry(tmp_settings)
+    assert reg.modules[0].installed_version == "1.0"
+    assert reg.modules[0].active is True
+
+
+async def test_finalize_static_cleans_up_on_bad_signature(tmp_settings, monkeypatch):
+    import io, tarfile, subprocess
+    from app.services import signing, packages as pkg
+    pubkey = tmp_settings.data_dir / "release.pub"
+    pubkey.parent.mkdir(parents=True, exist_ok=True)
+    pubkey.write_text("dummy")
+    tmp_settings.release_pubkey_path = pubkey
+
+    module = _mod(id="bad-pkg", kind="static", checksum=None,
+                  signature_url="https://github.com/o/r/x.minisig",
+                  download_url="https://github.com/o/r/x.tar.gz", latest_version="1.0")
+    _seed(tmp_settings, modules=[module])
+
+    part = tmp_settings.downloads_dir / "bad-pkg.part"
+    part.parent.mkdir(parents=True, exist_ok=True)
+    with tarfile.open(part, "w:gz") as tar:
+        info = tarfile.TarInfo(name="index.md"); info.size = 1
+        tar.addfile(info, io.BytesIO(b"x"))
 
     class _Resp:
+        content = b"sig"
         def raise_for_status(self): pass
-        def json(self): return manifest
-
     class _FakeClient:
+        def __init__(self, *a, **kw): pass
         async def __aenter__(self): return self
         async def __aexit__(self, *a): pass
-        async def get(self, url, timeout=None): return _Resp()
+        async def get(self, url): return _Resp()
+    monkeypatch.setattr(pkg.httpx, "AsyncClient", _FakeClient)
+    # Bad signature: nonzero exit
+    monkeypatch.setattr(signing, "_run_minisign",
+                        lambda args: subprocess.CompletedProcess(args=[], returncode=1,
+                                stdout="", stderr="bad sig"))
 
-    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _FakeClient)
-    count = await pkg_service.check_for_updates(tmp_settings)
-    assert count == 1
-    assert len(load_registry(tmp_settings).modules) == 1
+    await pkg._finalize_static(module, tmp_settings, part)
 
-
-async def test_check_for_updates_raises_on_network_error(tmp_settings, monkeypatch):
-    _seed(tmp_settings)
-
-    class _ErrorClient:
-        async def __aenter__(self): return self
-        async def __aexit__(self, *a): pass
-        async def get(self, url, timeout=None):
-            raise httpx.RequestError("connection refused")
-
-    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _ErrorClient)
-    with pytest.raises(httpx.RequestError):
-        await pkg_service.check_for_updates(tmp_settings)
-
-
-async def test_check_for_updates_returns_zero_when_no_server_configured(tmp_settings, monkeypatch):
-    """Fresh installs have an empty update_server; we must not attempt the HTTP call."""
-    tmp_settings.registry_path.parent.mkdir(parents=True, exist_ok=True)
-    tmp_settings.registry_path.write_text(Registry(update_server="").model_dump_json())
-
-    called = False
-
-    class _FailIfCalled:
-        async def __aenter__(self): return self
-        async def __aexit__(self, *a): pass
-        async def get(self, *a, **kw):
-            nonlocal called
-            called = True
-            raise AssertionError("HTTP must not fire when update_server is empty")
-
-    monkeypatch.setattr(pkg_service.httpx, "AsyncClient", _FailIfCalled)
-    assert await pkg_service.check_for_updates(tmp_settings) == 0
-    assert called is False
+    # Cleanup must have happened
+    assert not part.exists()
+    assert not (tmp_settings.downloads_dir / "bad-pkg.minisig").exists()
+    # Content dir untouched (no extraction attempted)
+    assert not (tmp_settings.content_dir / "bad-pkg").exists()
+    # Registry not marked installed
+    assert load_registry(tmp_settings).modules[0].installed_version is None
 
 
 # ── HTTP fixtures ─────────────────────────────────────────────────────────────
@@ -527,14 +692,16 @@ async def test_packages_page_shows_installed_module(client, tmp_settings):
     assert "WikiMed" in r.text
 
 
-async def test_packages_page_shows_available_module(client, tmp_settings):
-    m = _mod()
+async def test_packages_page_omits_uninstalled_module(client, tmp_settings):
+    """An uninstalled-but-still-registered module must not appear; the AVAILABLE section is gone."""
+    m = _mod()  # installed_version=None
     _seed(tmp_settings, [m])
     r = await client.get("/settings/packages")
-    assert "WikiMed" in r.text
+    assert "WikiMed" not in r.text
 
 
-async def test_packages_page_shows_updates_section_when_update_exists(client, tmp_settings):
+async def test_packages_page_shows_update_affordance_inline(client, tmp_settings):
+    """A module with has_update stays in INSTALLED but renders an UPDATE button + version-bump."""
     m = _mod(
         installed_version="2024-09",
         installed_checksum="sha256:old",
@@ -543,21 +710,26 @@ async def test_packages_page_shows_updates_section_when_update_exists(client, tm
     )
     _seed(tmp_settings, [m])
     r = await client.get("/settings/packages")
-    assert "UPDATES_AVAILABLE" in r.text
+    # No standalone UPDATES section.
+    assert "UPDATES_AVAILABLE" not in r.text
+    # UPDATE action button is present on the installed row.
+    assert "UPDATE" in r.text
+    # Version-bump badge "→ v2024-10" appears next to the installed version.
+    assert "→ v2024-10" in r.text
 
 
-# ── POST /api/packages/check-updates ─────────────────────────────────────────
-
-async def test_check_updates_returns_502_on_network_error(client, tmp_settings, monkeypatch):
-    _seed(tmp_settings)
-    import app.routers.packages as pkg_router
-
-    async def _fail(settings):
-        raise httpx.RequestError("down")
-
-    monkeypatch.setattr(pkg_router, "check_for_updates", _fail)
-    r = await client.post("/api/packages/check-updates")
-    assert r.status_code == 502
+async def test_packages_page_omits_update_button_when_no_update(client, tmp_settings):
+    """An installed module without an update does not render the UPDATE button or bump arrow."""
+    m = _mod(
+        installed_version="2024-10",
+        installed_checksum="sha256:abc",
+        latest_version="2024-10",
+        active=True,
+    )
+    _seed(tmp_settings, [m])
+    r = await client.get("/settings/packages")
+    assert "UPDATE</button>" not in r.text
+    assert "→ v" not in r.text
 
 
 # ── GET /api/packages/active-download ────────────────────────────────────────
@@ -777,6 +949,89 @@ def test_kiwix_remove_removes_book_entry(tmp_settings, monkeypatch):
     pkg_service._kiwix_remove(m, tmp_settings)
     text = (tmp_settings.zim_dir / "library.xml").read_text()
     assert "medical-wikimed.zim" not in text
+
+
+def test_kiwix_add_self_bootstraps_library_xml(tmp_settings, monkeypatch):
+    """If library.xml doesn't exist yet (kiwix-serve race), _kiwix_add must
+    create it and still register the book instead of silently no-opping."""
+    m = _mod()
+    tmp_settings.zim_dir.mkdir(parents=True, exist_ok=True)
+    zim = tmp_settings.zim_dir / "medical-wikimed.zim"
+    zim.write_bytes(b"content")
+    library_xml = tmp_settings.zim_dir / "library.xml"
+    assert not library_xml.exists()
+    monkeypatch.setattr(pkg_service, "_run", lambda cmd: None)
+
+    pkg_service._kiwix_add(m, tmp_settings)
+
+    assert library_xml.exists()
+    assert 'path="medical-wikimed.zim"' in library_xml.read_text()
+
+
+def test_reconcile_adds_installed_zims_missing_from_library(tmp_settings):
+    """Self-heals registry rows that were installed while library.xml was
+    missing (e.g. kiwix-serve hadn't created it yet)."""
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
+    _seed(tmp_settings, [m])
+    zim = tmp_settings.zim_dir / "medical-wikimed.zim"
+    zim.parent.mkdir(parents=True, exist_ok=True)
+    zim.write_bytes(b"content")
+    # library.xml does not exist yet.
+
+    pkg_service.reconcile_kiwix_library(tmp_settings)
+
+    text = (tmp_settings.zim_dir / "library.xml").read_text()
+    assert 'path="medical-wikimed.zim"' in text
+
+
+def test_reconcile_removes_entries_for_missing_files(tmp_settings):
+    """An entry whose .zim file is gone gets cleaned up."""
+    import xml.etree.ElementTree as ET
+    pkg_service.init_kiwix_library(tmp_settings)
+    tree = ET.parse(tmp_settings.zim_dir / "library.xml")
+    root = tree.getroot()
+    ET.SubElement(root, "book", {
+        "id": "stale-id", "path": "vanished.zim", "name": "vanished",
+    })
+    tree.write(str(tmp_settings.zim_dir / "library.xml"), encoding="unicode", xml_declaration=True)
+    _seed(tmp_settings, [])
+
+    pkg_service.reconcile_kiwix_library(tmp_settings)
+
+    text = (tmp_settings.zim_dir / "library.xml").read_text()
+    assert "vanished.zim" not in text
+
+
+def test_reconcile_preserves_entries_with_existing_files_not_in_registry(tmp_settings):
+    """A manually-copied ZIM (not tracked in the registry) but present on
+    disk and in library.xml is kept — conservative, doesn't wipe user state."""
+    import xml.etree.ElementTree as ET
+    pkg_service.init_kiwix_library(tmp_settings)
+    (tmp_settings.zim_dir / "manual.zim").write_bytes(b"x")
+    tree = ET.parse(tmp_settings.zim_dir / "library.xml")
+    root = tree.getroot()
+    ET.SubElement(root, "book", {
+        "id": "manual-id", "path": "manual.zim", "name": "manual",
+    })
+    tree.write(str(tmp_settings.zim_dir / "library.xml"), encoding="unicode", xml_declaration=True)
+    _seed(tmp_settings, [])
+
+    pkg_service.reconcile_kiwix_library(tmp_settings)
+
+    assert 'path="manual.zim"' in (tmp_settings.zim_dir / "library.xml").read_text()
+
+
+def test_reconcile_is_idempotent(tmp_settings):
+    m = _mod(installed_version="2024-10", installed_checksum="sha256:abc", active=True)
+    _seed(tmp_settings, [m])
+    zim = tmp_settings.zim_dir / "medical-wikimed.zim"
+    zim.parent.mkdir(parents=True, exist_ok=True)
+    zim.write_bytes(b"content")
+    pkg_service.reconcile_kiwix_library(tmp_settings)
+    pkg_service.reconcile_kiwix_library(tmp_settings)
+    import xml.etree.ElementTree as ET
+    tree = ET.parse(tmp_settings.zim_dir / "library.xml")
+    assert len(tree.getroot().findall("book")) == 1
 
 
 def test_kiwix_add_signals_kiwix_serve(tmp_settings, monkeypatch):

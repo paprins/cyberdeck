@@ -10,8 +10,9 @@ import httpx
 
 from app.config import Settings
 from app.models.registry import Module
-from app.services.registry import load_registry, save_registry, merge_remote_manifest
-from app.services.thumbnails import cache_thumbnail
+from app.services.content import extract_static_package
+from app.services.registry import load_registry, save_registry
+from app.services.signing import SignatureError, verify_minisign
 
 log = logging.getLogger(__name__)
 
@@ -22,9 +23,19 @@ _pending: list[str] = []
 # ── Path helpers ──────────────────────────────────────────────────────────────
 
 def _final_path(module: Module, settings: Settings) -> Path:
-    if module.category == "maps":
+    if module.kind == "mbtiles":
         return settings.maps_dir / f"{module.id}.mbtiles"
+    if module.kind == "static":
+        return settings.content_dir / module.id
     return settings.zim_dir / f"{module.id}.zim"
+
+
+def _sig_path(module: Module, settings: Settings) -> Path:
+    return settings.downloads_dir / f"{module.id}.minisig"
+
+
+def _trusted_comment(module: Module) -> str:
+    return f"cyberdeck content {module.id} v{module.latest_version}"
 
 
 def _part_path(module: Module, settings: Settings) -> Path:
@@ -147,25 +158,28 @@ async def uninstall_module(module: Module, settings: Settings) -> None:
     if mismatch.exists():
         mismatch.unlink()
     if final.exists():
-        final.unlink()
+        if module.kind == "static":
+            shutil.rmtree(final, ignore_errors=True)
+        else:
+            final.unlink()
     _total_path(module, settings).unlink(missing_ok=True)
-    if module.category != "maps":
+    _sig_path(module, settings).unlink(missing_ok=True)
+    if module.kind == "zim":
         _kiwix_remove(module, settings)
     _signal_service(module)
+    # Cached images and any other per-module cache state go too — the row is
+    # being removed; nothing else references the cache dir.
+    from app.services.thumbnails import delete_thumbnail
+    delete_thumbnail(module.id, settings)
     registry = load_registry(settings)
-    for m in registry.modules:
-        if m.id == module.id:
-            m.installed_version = None
-            m.installed_checksum = None
-            m.active = False
-            break
+    registry.modules = [m for m in registry.modules if m.id != module.id]
     save_registry(settings, registry)
 
 
 async def activate_module(module: Module, settings: Settings) -> None:
     from app.services.registry import set_module_active
     set_module_active(settings, module.id, True)
-    if module.category != "maps":
+    if module.kind == "zim":
         _kiwix_add(module, settings)
     _signal_service(module)
 
@@ -173,7 +187,7 @@ async def activate_module(module: Module, settings: Settings) -> None:
 async def deactivate_module(module: Module, settings: Settings) -> None:
     from app.services.registry import set_module_active
     set_module_active(settings, module.id, False)
-    if module.category != "maps":
+    if module.kind == "zim":
         _kiwix_remove(module, settings)
     _signal_service(module)
 
@@ -196,7 +210,7 @@ async def accept_checksum_mismatch(module: Module, settings: Settings) -> None:
             m.active = True
             break
     save_registry(settings, registry)
-    if module.category != "maps":
+    if module.kind == "zim":
         _kiwix_add(module, settings)
     _signal_service(module)
 
@@ -205,6 +219,9 @@ async def discard_checksum_mismatch(module: Module, settings: Settings) -> None:
     _part_path(module, settings).unlink(missing_ok=True)
     _mismatch_path(module, settings).unlink(missing_ok=True)
     _total_path(module, settings).unlink(missing_ok=True)
+    registry = load_registry(settings)
+    registry.modules = [m for m in registry.modules if m.id != module.id]
+    save_registry(settings, registry)
 
 
 # ── Kiwix library.xml management ──────────────────────────────────────────────
@@ -226,13 +243,14 @@ def init_kiwix_library(settings: Settings) -> None:
 def _kiwix_add(module: Module, settings: Settings) -> None:
     import uuid
     import xml.etree.ElementTree as ET
-    library_xml = settings.zim_dir / "library.xml"
     zim_path = settings.zim_dir / f"{module.id}.zim"
-    if not library_xml.exists():
-        return
     if not zim_path.exists():
         log.warning("kiwix_add: %s not found, skipping library update", zim_path)
         return
+    # Self-bootstrap if the file is missing — fixes the silent no-op that
+    # would happen if kiwix-serve hadn't yet created its empty library.xml.
+    init_kiwix_library(settings)
+    library_xml = settings.zim_dir / "library.xml"
     tree = ET.parse(library_xml)
     root = tree.getroot()
     for book in root.findall("book"):
@@ -245,6 +263,50 @@ def _kiwix_add(module: Module, settings: Settings) -> None:
     })
     tree.write(str(library_xml), encoding="unicode", xml_declaration=True)
     _run(["pkill", "-HUP", "kiwix-serve"])
+
+
+def reconcile_kiwix_library(settings: Settings) -> None:
+    """Make library.xml match the on-disk state: add entries for installed ZIM
+    modules in the registry whose .zim file exists, and remove entries whose
+    .zim file is gone.
+
+    Idempotent and conservative — entries pointing at existing files but not in
+    the registry are kept (covers manually-copied ZIMs). Run at startup so an
+    install that raced kiwix-serve coming up still ends up registered.
+    """
+    import uuid
+    import xml.etree.ElementTree as ET
+    init_kiwix_library(settings)
+    library_xml = settings.zim_dir / "library.xml"
+    tree = ET.parse(library_xml)
+    root = tree.getroot()
+
+    existing_paths = {book.get("path"): book for book in root.findall("book")}
+    mutated = False
+
+    registry = load_registry(settings)
+    for m in registry.modules:
+        if m.kind != "zim" or not m.is_installed:
+            continue
+        path_attr = f"{m.id}.zim"
+        if not (settings.zim_dir / path_attr).exists():
+            continue
+        if path_attr in existing_paths:
+            continue
+        ET.SubElement(root, "book", {
+            "id": str(uuid.uuid5(uuid.NAMESPACE_URL, m.id)),
+            "path": path_attr,
+            "name": m.id,
+        })
+        mutated = True
+
+    for path_attr, book in list(existing_paths.items()):
+        if not path_attr or not (settings.zim_dir / path_attr).exists():
+            root.remove(book)
+            mutated = True
+
+    if mutated:
+        tree.write(str(library_xml), encoding="unicode", xml_declaration=True)
 
 
 def _kiwix_remove(module: Module, settings: Settings) -> None:
@@ -263,7 +325,7 @@ def _kiwix_remove(module: Module, settings: Settings) -> None:
 
 
 def _signal_service(module: Module) -> None:
-    if module.category == "maps":
+    if module.kind == "mbtiles":
         _run(["pkill", "-HUP", "mbtileserver"])
 
 
@@ -321,31 +383,6 @@ def _drain_pending(settings: Settings) -> None:
         return
 
 
-async def check_for_updates(settings: Settings) -> int:
-    registry = load_registry(settings)
-    if not registry.update_server:
-        return 0
-    async with httpx.AsyncClient() as client:
-        r = await client.get(registry.update_server, timeout=10.0)
-        r.raise_for_status()
-        remote_modules = r.json()
-    before_ids = {m.id for m in load_registry(settings).modules}
-    before_versions = {m.id: m.latest_version for m in load_registry(settings).modules}
-
-    cached_images = await asyncio.gather(
-        *(cache_thumbnail(m["id"], m.get("image"), settings) for m in remote_modules)
-    )
-    for m, cached in zip(remote_modules, cached_images):
-        m["image"] = cached
-
-    merge_remote_manifest(settings, remote_modules)
-    after = load_registry(settings).modules
-    return sum(
-        1 for m in after
-        if m.id not in before_ids or m.latest_version != before_versions.get(m.id)
-    )
-
-
 async def _download_task(module: Module, settings: Settings) -> None:
     part = _part_path(module, settings)
     part.parent.mkdir(parents=True, exist_ok=True)
@@ -368,36 +405,10 @@ async def _download_task(module: Module, settings: Settings) -> None:
                     async for chunk in r.aiter_bytes(65536):
                         f.write(chunk)
 
-        sha = hashlib.sha256()
-        with part.open("rb") as f:
-            for chunk in iter(lambda: f.read(65536), b""):
-                sha.update(chunk)
-        digest = f"sha256:{sha.hexdigest()}"
-        if digest != module.checksum:
-            _mismatch_path(module, settings).write_text(digest)
-            log.warning(
-                "Checksum mismatch for %s: expected %s, got %s",
-                module.id, module.checksum, digest,
-            )
-            return
-
-        final = _final_path(module, settings)
-        final.parent.mkdir(parents=True, exist_ok=True)
-        part.rename(final)
-        _total_path(module, settings).unlink(missing_ok=True)
-
-        registry = load_registry(settings)
-        for m in registry.modules:
-            if m.id == module.id:
-                m.installed_version = module.latest_version
-                m.installed_checksum = module.checksum
-                m.active = True
-                break
-        save_registry(settings, registry)
-
-        if module.category != "maps":
-            _kiwix_add(module, settings)
-        _signal_service(module)
+        if module.kind == "static":
+            await _finalize_static(module, settings, part)
+        else:
+            await _finalize_hashed(module, settings, part)
 
     except asyncio.CancelledError:
         raise
@@ -406,3 +417,150 @@ async def _download_task(module: Module, settings: Settings) -> None:
     finally:
         _active_tasks.pop(module.id, None)
         _drain_pending(settings)
+
+
+async def _finalize_hashed(module: Module, settings: Settings, part: Path) -> None:
+    sha = hashlib.sha256()
+    with part.open("rb") as f:
+        for chunk in iter(lambda: f.read(65536), b""):
+            sha.update(chunk)
+    digest = f"sha256:{sha.hexdigest()}"
+    if digest != module.checksum:
+        _mismatch_path(module, settings).write_text(digest)
+        log.warning(
+            "Checksum mismatch for %s: expected %s, got %s",
+            module.id, module.checksum, digest,
+        )
+        return
+
+    final = _final_path(module, settings)
+    final.parent.mkdir(parents=True, exist_ok=True)
+    part.rename(final)
+    _total_path(module, settings).unlink(missing_ok=True)
+
+    _mark_installed(module, settings, digest)
+
+    if module.kind == "zim":
+        _kiwix_add(module, settings)
+    _signal_service(module)
+
+
+async def _finalize_static(module: Module, settings: Settings, part: Path) -> None:
+    """Fetch the .minisig sidecar, verify, then extract into content_dir."""
+    if not module.signature_url:
+        log.error("Static module %s has no signature_url", module.id)
+        return
+    sig_path = _sig_path(module, settings)
+    sig_path.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        async with httpx.AsyncClient(follow_redirects=True, timeout=30.0) as client:
+            r = await client.get(module.signature_url)
+            r.raise_for_status()
+            sig_path.write_bytes(r.content)
+        verify_minisign(
+            tarball_path=part,
+            sig_path=sig_path,
+            expected_trusted_comment=_trusted_comment(module),
+            pubkey_path=settings.release_pubkey_path,
+        )
+        final_dir = _final_path(module, settings)
+        extract_static_package(part, final_dir)
+        bundled_image = _resolve_bundled_image(module, settings, final_dir)
+        _mark_installed(module, settings, checksum=None, image=bundled_image)
+    except (httpx.RequestError, httpx.HTTPStatusError, SignatureError) as exc:
+        log.error("Static install failed for %s: %s", module.id, exc)
+    except Exception:
+        # extract_static_package raises on bad tarball, ExtractionError, OSError.
+        # Cleanup must run regardless — the finally block handles it.
+        log.exception("Static extraction failed for %s", module.id)
+    finally:
+        part.unlink(missing_ok=True)
+        sig_path.unlink(missing_ok=True)
+        _total_path(module, settings).unlink(missing_ok=True)
+
+
+_BUNDLED_IMAGE_EXTS = ("png", "jpg", "jpeg", "webp", "gif")
+
+
+def _resolve_bundled_image(
+    module: Module, settings: Settings, final_dir: Path
+) -> str | None:
+    """Resolve a card image bundled inside the extracted package and return a
+    URL that serves it directly from ``content_dir`` (no copy). Returns
+    ``None`` if no usable bundled image is found.
+
+    Bundled files are already on disk after extraction; serving them via the
+    existing ``/content/{id}/...`` route avoids duplicating bytes into the
+    cache dir. The cache dir is reserved for things the device fetched
+    separately (e.g. HTTP image_url thumbnails).
+
+    Precedence: a manifest ``image_url`` that was an HTTP URL (already cached
+    at register time) wins — this helper is a no-op in that case. Otherwise
+    the rule is: ``image_path`` (the relative path captured from the manifest)
+    if set, else default to ``card.{ext}`` at the package root.
+    """
+    if module.image:
+        return None  # HTTP-cached image already wins
+    if not final_dir.exists():
+        return None
+
+    final_root = final_dir.resolve()
+    if module.image_path:
+        candidate = (final_dir / module.image_path).resolve()
+        try:
+            candidate.relative_to(final_root)
+        except ValueError:
+            log.warning(
+                "image_path %r for %s escapes package root; ignoring",
+                module.image_path, module.id,
+            )
+            return None
+        if not candidate.is_file():
+            log.debug("image_path %r for %s not found in package", module.image_path, module.id)
+            return None
+        source = candidate
+    else:
+        source = next(
+            (final_dir / f"card.{ext}" for ext in _BUNDLED_IMAGE_EXTS
+             if (final_dir / f"card.{ext}").is_file()),
+            None,
+        )
+        if source is None:
+            return None
+
+    ext = source.suffix.lower().lstrip(".")
+    if ext not in _BUNDLED_IMAGE_EXTS:
+        log.debug("bundled image %s has unsupported extension %r", source, ext)
+        return None
+
+    rel_path = source.resolve().relative_to(final_root)
+    return f"/content/{module.id}/{rel_path.as_posix()}"
+
+
+def rescan_bundled_image(module: Module, settings: Settings) -> str | None:
+    """Look for a bundled card image inside an already-installed static
+    package and copy it into ``images_dir``. Returns the local URL or None.
+
+    Used by library refresh to heal modules installed before the bundled-image
+    feature shipped (or whose image was cleared by a stale registry merge).
+    No-op for non-static kinds.
+    """
+    if module.kind != "static":
+        return None
+    return _resolve_bundled_image(module, settings, _final_path(module, settings))
+
+
+def _mark_installed(
+    module: Module, settings: Settings, checksum: str | None,
+    image: str | None = None,
+) -> None:
+    registry = load_registry(settings)
+    for m in registry.modules:
+        if m.id == module.id:
+            m.installed_version = module.latest_version
+            m.installed_checksum = checksum
+            m.active = True
+            if image is not None:
+                m.image = image
+            break
+    save_registry(settings, registry)

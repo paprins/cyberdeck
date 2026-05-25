@@ -412,7 +412,7 @@ async def test_system_payload_connectivity_reflects_cache(client):
 def test_snapshot_includes_connectivity_check(tmp_settings):
     from app.models.registry import Registry
     from app.services.registry import save_registry
-    save_registry(tmp_settings, Registry(update_server="https://x/m.json", modules=[]))
+    save_registry(tmp_settings, Registry(modules=[]))
     snap = notif.build_snapshot(tmp_settings, wifi_connected=True)
     assert snap.connectivity_check is False
     assert snap.connectivity_grace_minutes == 10
@@ -422,7 +422,7 @@ def test_snapshot_includes_connectivity_check(tmp_settings):
 def test_snapshot_auto_disabled_at_propagates_from_cache(tmp_settings):
     from app.models.registry import Registry
     from app.services.registry import save_registry
-    save_registry(tmp_settings, Registry(update_server="https://x/m.json", modules=[]))
+    save_registry(tmp_settings, Registry(modules=[]))
     conn._state_cache.auto_disabled_at = 1234567.0
     snap = notif.build_snapshot(tmp_settings, wifi_connected=True)
     assert snap.connectivity_check_auto_disabled_at == 1234567.0

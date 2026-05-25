@@ -15,6 +15,7 @@ from app.models.library import (
 )
 from app.models.registry import Module, Registry
 from app.services import libraries as lib_svc
+from app.services import packages as packages_svc
 from app.services import registry as registry_svc
 
 
@@ -60,7 +61,7 @@ _META4 = b"""<?xml version="1.0" encoding="UTF-8"?>
 def _seed(tmp_settings, libraries=None, modules=None):
     tmp_settings.registry_path.parent.mkdir(parents=True, exist_ok=True)
     reg = Registry(
-        update_server="https://example.com/manifest.json",
+        
         modules=modules or [],
         libraries=libraries or [],
     )
@@ -269,7 +270,7 @@ async def test_resolve_entry_returns_module_dict(monkeypatch, tmp_settings):
     assert result["checksum"].startswith("sha256:")
     assert result["download_url"].startswith("https://mirror1.")
     assert result["source_library_id"] == "lib-1"
-    assert result["image"] == "/data-static/images/mdwiki_en_all_maxi_2025-11.png"
+    assert result["image"] == "/data-cache/mdwiki_en_all_maxi_2025-11/cover.png"
     assert result["category"] == "library"
 
 
@@ -382,26 +383,27 @@ def test_remove_library_deletes_cached_thumbnails_for_dropped_modules(tmp_settin
     available = Module(
         id="pkg1", display_name="P", category="library",
         description="", latest_version="v1", size_gb=1.0, checksum="sha256:a",
-        image="/data-static/images/pkg1.png",
+        image="/data-cache/pkg1/cover.png",
         source_library_id="L1",
     )
     installed = Module(
         id="pkg2", display_name="I", category="library",
         description="", latest_version="v1", size_gb=1.0, checksum="sha256:b",
         installed_version="v1", installed_checksum="sha256:b", active=True,
-        image="/data-static/images/pkg2.png",
+        image="/data-cache/pkg2/cover.png",
         source_library_id="L1",
     )
     _seed(tmp_settings, libraries=[lib], modules=[available, installed])
-    tmp_settings.images_dir.mkdir(parents=True, exist_ok=True)
-    (tmp_settings.images_dir / "pkg1.png").write_bytes(b"a")
-    (tmp_settings.images_dir / "pkg2.png").write_bytes(b"b")
+    (tmp_settings.cache_dir / "pkg1").mkdir(parents=True, exist_ok=True)
+    (tmp_settings.cache_dir / "pkg1" / "cover.png").write_bytes(b"a")
+    (tmp_settings.cache_dir / "pkg2").mkdir(parents=True, exist_ok=True)
+    (tmp_settings.cache_dir / "pkg2" / "cover.png").write_bytes(b"b")
 
     registry_svc.remove_library(tmp_settings, "L1")
 
-    assert not (tmp_settings.images_dir / "pkg1.png").exists()
-    # Installed module is kept (source cleared) so its thumbnail stays.
-    assert (tmp_settings.images_dir / "pkg2.png").exists()
+    assert not (tmp_settings.cache_dir / "pkg1").exists()
+    # Installed module is kept (source cleared) so its cache stays.
+    assert (tmp_settings.cache_dir / "pkg2" / "cover.png").exists()
 
 
 # ── HTTP fixtures ────────────────────────────────────────────────────────────
@@ -532,6 +534,10 @@ async def test_register_endpoint_writes_modules(client, tmp_settings, monkeypatc
     async def fake_meta4(url):
         return _META4
     monkeypatch.setattr(lib_svc, "_fetch_meta4", fake_meta4)
+    installs: list[str] = []
+    async def fake_start(module, settings):
+        installs.append(module.id)
+    monkeypatch.setattr(packages_svc, "start_download", fake_start)
 
     payload = {
         "entries": [
@@ -557,6 +563,7 @@ async def test_register_endpoint_writes_modules(client, tmp_settings, monkeypatc
     assert any(m.id == "mdwiki_en_all_maxi_2025-11" for m in reg.modules)
     mod = next(m for m in reg.modules if m.id == "mdwiki_en_all_maxi_2025-11")
     assert mod.source_library_id == "L1"
+    assert installs == ["mdwiki_en_all_maxi_2025-11"]
 
 
 async def test_register_endpoint_partial_success(client, tmp_settings, monkeypatch):
@@ -568,6 +575,10 @@ async def test_register_endpoint_partial_success(client, tmp_settings, monkeypat
             raise httpx.RequestError("down")
         return _META4
     monkeypatch.setattr(lib_svc, "_fetch_meta4", fake_meta4)
+    installs: list[str] = []
+    async def fake_start(module, settings):
+        installs.append(module.id)
+    monkeypatch.setattr(packages_svc, "start_download", fake_start)
 
     payload = {
         "entries": [
@@ -591,6 +602,8 @@ async def test_register_endpoint_partial_success(client, tmp_settings, monkeypat
     assert "good_2025-01" in body["registered"]
     assert len(body["failed"]) == 1
     assert body["failed"][0]["title"] == "Bad"
+    # Only the successful entry was queued for download.
+    assert installs == ["good_2025-01"]
 
 
 async def test_register_endpoint_rejects_foreign_meta4_host(client, tmp_settings, monkeypatch):
@@ -622,16 +635,101 @@ async def test_register_endpoint_returns_404_for_unknown_library(client, tmp_set
     assert r.status_code == 404
 
 
-# ── Settings page renders libraries ──────────────────────────────────────────
+async def test_refresh_endpoint_returns_counts(client, tmp_settings):
+    """Empty registry: endpoint succeeds with zero counts."""
+    _seed(tmp_settings)
+    r = await client.post("/api/libraries/refresh")
+    assert r.status_code == 200
+    body = r.json()
+    assert body == {"refreshed_libraries": 0, "updated_modules": 0, "errors": []}
 
 
-async def test_settings_page_renders_libraries(client, tmp_settings):
+async def test_refresh_one_endpoint_returns_404_for_unknown(client, tmp_settings):
+    _seed(tmp_settings)
+    r = await client.post("/api/libraries/nope/refresh")
+    assert r.status_code == 404
+
+
+async def test_refresh_one_endpoint_returns_counts(client, tmp_settings):
+    lib = Library(id="L1", display_name="X", url="o/r", type="github")
+    _seed(tmp_settings, libraries=[lib])
+    r = await client.post("/api/libraries/L1/refresh")
+    assert r.status_code == 200
+    body = r.json()
+    # Empty registry (no modules from L1) → no fetch happens, zero counts.
+    assert body == {"refreshed_libraries": 0, "updated_modules": 0, "errors": []}
+
+
+async def test_register_endpoint_skips_install_when_already_installed(
+    client, tmp_settings, monkeypatch
+):
+    """Re-picking an already-installed entry refreshes metadata but does not redownload."""
+    lib = Library(id="L1", display_name="X", url="https://catalog.example.org/catalog/v2/entries")
+    existing = Module(
+        id="mdwiki_en_all_maxi_2025-11",
+        display_name="MDWiki", category="library",
+        description="", latest_version="mdwiki_en_all_maxi_2025-11",
+        size_gb=2.3, checksum="sha256:old",
+        installed_version="mdwiki_en_all_maxi_2025-11",
+        installed_checksum="sha256:old",
+        active=True,
+        source_library_id="L1",
+    )
+    _seed(tmp_settings, libraries=[lib], modules=[existing])
+
+    async def fake_meta4(url):
+        return _META4
+    monkeypatch.setattr(lib_svc, "_fetch_meta4", fake_meta4)
+    installs: list[str] = []
+    async def fake_start(module, settings):
+        installs.append(module.id)
+    monkeypatch.setattr(packages_svc, "start_download", fake_start)
+
+    payload = {
+        "entries": [
+            {
+                "entry_id": "urn:uuid:e1",
+                "title": "MDWiki",
+                "acquisition_url": "https://download.example.org/zim/mdwiki_en_all_maxi_2025-11.zim",
+                "meta4_url": "https://download.example.org/zim/mdwiki_en_all_maxi_2025-11.zim.meta4",
+            }
+        ]
+    }
+    r = await client.post("/api/libraries/L1/register", json=payload)
+    assert r.status_code == 200
+    assert r.json()["registered"] == ["mdwiki_en_all_maxi_2025-11"]
+    assert installs == []  # already installed → no redownload
+
+
+# ── Packages page renders libraries ──────────────────────────────────────────
+
+
+async def test_packages_page_renders_libraries(client, tmp_settings):
     lib = Library(
         id="L1", display_name="Kiwix NL",
         url="https://library.kiwix.org/catalog/v2/entries", lang="nld",
     )
     _seed(tmp_settings, libraries=[lib])
-    r = await client.get("/settings")
+    r = await client.get("/settings/packages")
     assert r.status_code == 200
     assert "Kiwix NL" in r.text
     assert "LIBRARIES" in r.text
+
+
+async def test_settings_preferences_page_no_longer_renders_libraries(client, tmp_settings):
+    lib = Library(
+        id="L1", display_name="Kiwix NL",
+        url="https://library.kiwix.org/catalog/v2/entries", lang="nld",
+    )
+    _seed(tmp_settings, libraries=[lib])
+    r = await client.get("/settings/preferences")
+    assert r.status_code == 200
+    assert "Kiwix NL" not in r.text
+    assert "PICK_FROM_LIBRARY" not in r.text
+    assert "ADD_LIBRARY" not in r.text
+
+
+async def test_settings_redirects_to_status(client):
+    r = await client.get("/settings", follow_redirects=False)
+    assert r.status_code == 307
+    assert r.headers["location"] == "/settings/status"

@@ -176,7 +176,7 @@ async def test_search_modules_encodes_special_chars_in_url():
 
 async def test_search_endpoint_result_shape(client, tmp_settings, monkeypatch):
     reg = Registry(
-        update_server="https://example.com/manifest.json",
+        
         modules=[
             Module(
                 id="medical-wikimed", display_name="Medical", category="medical",

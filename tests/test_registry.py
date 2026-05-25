@@ -3,6 +3,18 @@ import pytest
 from app.models.registry import Module, Registry
 
 
+def test_module_id_rejects_path_traversal():
+    """Module.id flows directly into filesystem paths — must reject `..` and `/`."""
+    import pytest
+    from pydantic import ValidationError
+    for bad in ("../escape", "foo/bar", "etc/passwd", "..", "x y"):
+        with pytest.raises(ValidationError):
+            Module(
+                id=bad, display_name="x", category="medical", description="",
+                latest_version="1", size_gb=0, checksum="sha256:abc",
+            )
+
+
 def test_module_defaults():
     m = Module(
         id="medical-wikimed",
@@ -51,15 +63,16 @@ def test_module_has_update():
 
 
 def test_registry_defaults():
-    r = Registry(update_server="https://example.com/manifest.json")
+    r = Registry()
     assert r.modules == []
+    assert r.libraries == []
 
 
 def test_registry_serialises_to_json():
-    r = Registry(update_server="https://example.com/manifest.json")
+    r = Registry()
     data = json.loads(r.model_dump_json())
-    assert data["update_server"] == "https://example.com/manifest.json"
     assert data["modules"] == []
+    assert data["libraries"] == []
 
 
 from app.services.registry import (
@@ -76,10 +89,7 @@ from app.services.registry import (
 def _seed(tmp_settings, modules=None):
     """Write a registry.json to the tmp data dir."""
     tmp_settings.registry_path.parent.mkdir(parents=True, exist_ok=True)
-    reg = Registry(
-        update_server="https://example.com/manifest.json",
-        modules=modules or [],
-    )
+    reg = Registry(modules=modules or [])
     tmp_settings.registry_path.write_text(reg.model_dump_json())
 
 
@@ -102,8 +112,8 @@ def _sample_module(**overrides) -> Module:
 def test_load_empty_registry(tmp_settings):
     _seed(tmp_settings)
     reg = load_registry(tmp_settings)
-    assert reg.update_server == "https://example.com/manifest.json"
     assert reg.modules == []
+    assert reg.libraries == []
 
 
 def test_load_missing_creates_default(tmp_settings):
@@ -113,12 +123,12 @@ def test_load_missing_creates_default(tmp_settings):
 
 
 def test_save_and_reload(tmp_settings):
-    _seed(tmp_settings)
+    _seed(tmp_settings, modules=[_sample_module()])
     reg = load_registry(tmp_settings)
-    reg.update_server = "https://new.example.com/manifest.json"
     save_registry(tmp_settings, reg)
     reloaded = load_registry(tmp_settings)
-    assert reloaded.update_server == "https://new.example.com/manifest.json"
+    assert len(reloaded.modules) == 1
+    assert reloaded.modules[0].id == "medical-wikimed"
 
 
 def test_get_active_modules_empty(tmp_settings):
@@ -171,6 +181,62 @@ def test_merge_remote_manifest_adds_new_modules(tmp_settings):
     reg = load_registry(tmp_settings)
     assert len(reg.modules) == 1
     assert reg.modules[0].id == "medical-wikimed"
+
+
+def test_merge_remote_manifest_preserves_locally_resolved_image(tmp_settings):
+    """A locally-resolved bundled image (set by install) must survive refresh
+    even when the manifest doesn't ship an HTTP image_url."""
+    from app.services.registry import merge_remote_manifest, load_registry
+    existing = Module(
+        id="first-aid", display_name="First Aid", category="medical",
+        description="", latest_version="1.0", size_gb=0.0, kind="static",
+        signature_url="https://example.com/x.minisig",
+        download_url="https://example.com/x.tar.gz", entry="index.md",
+        installed_version="1.0", active=True,
+        image="/content/first-aid/card.png",
+        source_library_id="L1",
+    )
+    tmp_settings.registry_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_settings.registry_path.write_text(Registry(modules=[existing]).model_dump_json())
+    remote = {
+        "id": "first-aid", "display_name": "First Aid (renamed)",
+        "category": "medical", "description": "", "latest_version": "1.1",
+        "size_gb": 0.0, "kind": "static",
+        "signature_url": "https://example.com/x.minisig",
+        "download_url": "https://example.com/x.tar.gz", "entry": "index.md",
+        "image": None, "image_path": None, "source_library_id": "L1",
+    }
+    merge_remote_manifest(tmp_settings, [remote])
+    refreshed = load_registry(tmp_settings).modules[0]
+    assert refreshed.image == "/content/first-aid/card.png"
+    assert refreshed.latest_version == "1.1"
+    assert refreshed.display_name == "First Aid (renamed)"
+
+
+def test_merge_remote_manifest_overwrites_image_when_remote_has_one(tmp_settings):
+    """When the manifest does ship an HTTP image (already cached), it wins."""
+    from app.services.registry import merge_remote_manifest, load_registry
+    existing = Module(
+        id="first-aid", display_name="x", category="medical", description="",
+        latest_version="1.0", size_gb=0.0, kind="static",
+        signature_url="https://example.com/x.minisig",
+        download_url="https://example.com/x.tar.gz", entry="index.md",
+        installed_version="1.0", active=True,
+        image="/content/first-aid/card.png",
+        source_library_id="L1",
+    )
+    tmp_settings.registry_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_settings.registry_path.write_text(Registry(modules=[existing]).model_dump_json())
+    remote = {
+        "id": "first-aid", "display_name": "x", "category": "medical",
+        "description": "", "latest_version": "1.0", "size_gb": 0.0,
+        "kind": "static", "signature_url": "https://example.com/x.minisig",
+        "download_url": "https://example.com/x.tar.gz", "entry": "index.md",
+        "image": "/data-cache/first-aid/cover.jpg",
+        "image_path": None, "source_library_id": "L1",
+    }
+    merge_remote_manifest(tmp_settings, [remote])
+    assert load_registry(tmp_settings).modules[0].image == "/data-cache/first-aid/cover.jpg"
 
 
 def test_merge_remote_manifest_preserves_installed_state(tmp_settings):

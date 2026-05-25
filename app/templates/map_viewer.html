@@ -1,0 +1,409 @@
+{% extends "base.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/maps/maplibre-gl.css">
+{# Non-deferred: Alpine starts as soon as its own deferred script runs and
+   walks the DOM in a microtask — that microtask drains before the next
+   deferred script, so a deferred maplibre-gl.js would be undefined when
+   x-init() executes. Loading synchronously here guarantees the global. #}
+<script src="/static/maps/maplibre-gl.js"></script>
+<script>
+  // MapLibre IControl that toggles the map theme. The icon shows the
+  // destination state (sun = switch to light, moon = switch to dark) — the
+  // standard convention used by GitHub, Twitter, etc. Closes over the Alpine
+  // component (`cmp`) so the click handler can call switchTheme on it.
+  // MapLibre IControl for toggling measurement mode. Mode and readiness
+  // live in Alpine state (cmp.measureMode, cmp._measureReady) and can change
+  // from sources other than this button (escape key, programmatic). The
+  // x-data wires $watch handlers that call refresh() to keep the visual in
+  // sync; the click handler also calls refresh() so a same-tick update wins.
+  // Reset the camera to the tilejson bounds (the initial fit at page load).
+  // Stateless control — same pattern as the theme/measure ones.
+  function makeResetZoomControl(cmp) {
+    let container;
+    return {
+      onAdd() {
+        container = document.createElement('div');
+        container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cd-map-reset-btn';
+        btn.setAttribute('aria-label', 'Reset map view');
+        btn.title = 'RESET_VIEW';
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'material-symbols-outlined';
+        iconSpan.setAttribute('style',
+          "font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20;" +
+          "font-size:18px;color:var(--color-on-surface);");
+        iconSpan.textContent = 'fit_screen';
+        btn.appendChild(iconSpan);
+        btn.addEventListener('click', () => cmp.resetView());
+        container.appendChild(btn);
+        return container;
+      },
+      onRemove() {
+        container.parentNode?.removeChild(container);
+      },
+    };
+  }
+
+  function makeMeasureControl(cmp) {
+    let container, btn, iconSpan;
+    const render = () => {
+      if (!btn) return;
+      btn.disabled = !cmp._measureReady;
+      btn.style.opacity = cmp._measureReady ? '1' : '0.3';
+      iconSpan.style.color = cmp.measureMode
+        ? 'var(--color-primary-container)'
+        : 'var(--color-on-surface)';
+    };
+    return {
+      onAdd() {
+        container = document.createElement('div');
+        container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cd-map-measure-btn';
+        btn.setAttribute('aria-label', 'Toggle measurement mode');
+        btn.title = 'TOGGLE_MEASURE';
+        iconSpan = document.createElement('span');
+        iconSpan.className = 'material-symbols-outlined';
+        iconSpan.setAttribute('style',
+          "font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20;" +
+          "font-size:18px;");
+        iconSpan.textContent = 'straighten';
+        btn.appendChild(iconSpan);
+        btn.addEventListener('click', () => { cmp.measureToggle(); render(); });
+        container.appendChild(btn);
+        render();
+        return container;
+      },
+      onRemove() {
+        container.parentNode?.removeChild(container);
+      },
+      refresh: render,
+    };
+  }
+
+  function makeThemeControl(cmp) {
+    let container;
+    const iconFor = (theme) => theme === 'dark' ? 'light_mode' : 'dark_mode';
+    return {
+      onAdd() {
+        container = document.createElement('div');
+        container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cd-map-theme-btn';
+        btn.setAttribute('aria-label', 'Toggle map theme');
+        btn.title = 'TOGGLE_MAP_THEME';
+        const iconSpan = document.createElement('span');
+        iconSpan.className = 'material-symbols-outlined';
+        iconSpan.setAttribute('style',
+          "font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20;" +
+          "font-size:18px;color:var(--color-on-surface);");
+        iconSpan.textContent = iconFor(cmp.mapTheme);
+        btn.appendChild(iconSpan);
+        btn.addEventListener('click', () => {
+          const newTheme = cmp.mapTheme === 'dark' ? 'light' : 'dark';
+          cmp.switchTheme(newTheme);
+          iconSpan.textContent = iconFor(newTheme);
+        });
+        container.appendChild(btn);
+        return container;
+      },
+      onRemove() {
+        container.parentNode?.removeChild(container);
+      },
+    };
+  }
+</script>
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 flex flex-col bg-surface min-h-0">
+
+  <nav class="px-4 sm:px-6 py-3 border-b border-outline-variant/15 flex items-center gap-2 text-[10px] uppercase tracking-[0.16em] font-headline text-on-surface/40 flex-shrink-0">
+    <a href="/" class="hover:text-primary-container">HOME</a>
+    <span class="text-on-surface/20">/</span>
+    <a href="/settings/packages" class="hover:text-primary-container">PACKAGES</a>
+    <span class="text-on-surface/20">/</span>
+    <span class="text-on-surface truncate">{{ module.display_name | replace(' ', '_') | upper }}</span>
+  </nav>
+
+  <div
+    id="map"
+    class="flex-1 w-full min-h-0 relative"
+    x-data="{
+      map: null,
+      bounds: null,
+      _marker: null,
+      lat: null,
+      lon: null,
+      jumpInput: '',
+      measureMode: false,
+      measureVertices: [],
+      _measureReady: false,
+      _measureMarkers: [],
+      mapTheme: (typeof localStorage !== 'undefined' && localStorage.getItem('cyberdeck:map-theme')) || 'dark',
+      tilejsonUrl: '/maps/{{ module.id }}',
+      get styleUrl() { return '/map/{{ module.id }}/style.json?theme=' + this.mapTheme; },
+      formatCoord() {
+        if (this.lat === null) return 'TAP_MAP';
+        const la = Math.abs(this.lat).toFixed(5) + '_' + (this.lat >= 0 ? 'N' : 'S');
+        const lo = Math.abs(this.lon).toFixed(5) + '_' + (this.lon >= 0 ? 'E' : 'W');
+        return la + ' · ' + lo;
+      },
+      parseCoords(s) {
+        // Accept signed decimals, our own readout format (52.37_N · 4.89_E),
+        // and common variants with °, hemisphere letters, or geo: URIs.
+        // The lat → lon order must be preserved; hemisphere letters override
+        // any sign on the adjacent number.
+        s = s.trim().replace(/^geo:/i, '').replace(/[·°]/g, ' ');
+        s = s.replace(/-?(\d+(?:\.\d+)?)\s*_?\s*([NSEW])\b/gi, (_, num, hem) => {
+          const h = hem.toUpperCase();
+          return (h === 'S' || h === 'W' ? '-' : '') + num;
+        });
+        const m = s.match(/^\s*(-?\d+(?:\.\d+)?)[,\s]+(-?\d+(?:\.\d+)?)\s*$/);
+        if (!m) return null;
+        const lat = parseFloat(m[1]), lon = parseFloat(m[2]);
+        if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+        return { lat, lon };
+      },
+      setPoint(lat, lon) {
+        this.lat = lat;
+        this.lon = lon;
+        if (this._marker) this._marker.remove();
+        const el = document.createElement('div');
+        el.className = 'cd-map-point';
+        this._marker = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([lon, lat])
+          .addTo(this.map);
+      },
+      _toast(severity, title, message) {
+        window.dispatchEvent(new CustomEvent('toast', { detail: { severity, title, message } }));
+      },
+      doJump() {
+        if (!this.map) return;
+        const p = this.parseCoords(this.jumpInput);
+        if (!p) { this._toast('warning', 'INVALID_COORDS', 'EXPECTED_LAT_LON'); return; }
+        if (this.bounds) {
+          const [w, s, e, n] = this.bounds;
+          if (p.lat < s || p.lat > n || p.lon < w || p.lon > e) {
+            this._toast('error', 'OUT_OF_BOUNDS', 'OUTSIDE_MAP_AREA');
+            return;
+          }
+        }
+        this.map.jumpTo({ center: [p.lon, p.lat] });
+        this.setPoint(p.lat, p.lon);
+      },
+      async doCopy() {
+        if (this.lat === null) return;
+        // Copy the universal signed-decimal form (lat, lon), not the
+        // formatted readout — so it pastes into Google Maps, GPX tools,
+        // and our own jump-to input without modification.
+        const text = this.lat.toFixed(5) + ', ' + this.lon.toFixed(5);
+        try {
+          if (navigator.clipboard && window.isSecureContext) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.style.position = 'fixed';
+            ta.style.opacity = '0';
+            document.body.appendChild(ta);
+            ta.focus(); ta.select();
+            document.execCommand('copy');
+            document.body.removeChild(ta);
+          }
+          this._toast('success', 'COORDS_COPIED', text);
+        } catch (e) {
+          this._toast('error', 'COPY_FAILED', '');
+        }
+      },
+      _haversine(lat1, lon1, lat2, lon2) {
+        const R = 6371000;
+        const toRad = d => d * Math.PI / 180;
+        const dLat = toRad(lat2 - lat1);
+        const dLon = toRad(lon2 - lon1);
+        const a = Math.sin(dLat / 2) ** 2
+                + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+        return R * 2 * Math.asin(Math.sqrt(a));
+      },
+      _measureGeoJSON() {
+        // Empty FeatureCollection when <2 vertices: MapLibre rejects a bare
+        // LineString with zero/one coordinate as invalid GeoJSON.
+        const coords = this.measureVertices.map(v => [v.lon, v.lat]);
+        if (coords.length < 2) return { type: 'FeatureCollection', features: [] };
+        return { type: 'FeatureCollection', features: [{
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: coords },
+        }]};
+      },
+      measureFormat() {
+        const v = this.measureVertices;
+        if (v.length < 2) return 'ADD_POINT';
+        let dist = 0;
+        for (let i = 1; i < v.length; i++) {
+          dist += this._haversine(v[i-1].lat, v[i-1].lon, v[i].lat, v[i].lon);
+        }
+        if (dist < 1000) return Math.round(dist) + '_M';
+        return (dist / 1000).toFixed(1) + '_KM';
+      },
+      measureAddVertex(lat, lon) {
+        this.measureVertices.push({ lat, lon });
+        const el = document.createElement('div');
+        el.className = 'cd-map-point';
+        const m = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([lon, lat]).addTo(this.map);
+        this._measureMarkers.push(m);
+        this.map.getSource('measure-line').setData(this._measureGeoJSON());
+      },
+      measureClear() {
+        this._measureMarkers.forEach(m => m.remove());
+        this._measureMarkers = [];
+        this.measureVertices = [];
+        this.map.getSource('measure-line').setData(this._measureGeoJSON());
+      },
+      measureToggle() {
+        if (!this._measureReady) return;
+        if (this.measureMode) this.measureClear();
+        this.measureMode = !this.measureMode;
+      },
+      resetView() {
+        if (!this.map || !this.bounds) return;
+        this.map.fitBounds(
+          [[this.bounds[0], this.bounds[1]], [this.bounds[2], this.bounds[3]]],
+          { padding: 20, animate: false }
+        );
+      },
+      _attachMeasureLayer() {
+        // styledata fires repeatedly (mid-load + each tile fetch); two guards
+        // keep this idempotent: bail if the style isn't finished loading, or
+        // if the source is already attached for this style.
+        if (!this.map.isStyleLoaded()) return;
+        if (this.map.getSource('measure-line')) return;
+        const lineColor = getComputedStyle(document.documentElement)
+          .getPropertyValue('--color-primary-container').trim();
+        this.map.addSource('measure-line', {
+          type: 'geojson',
+          data: this._measureGeoJSON(),
+        });
+        this.map.addLayer({
+          id: 'measure-line',
+          type: 'line',
+          source: 'measure-line',
+          paint: { 'line-color': lineColor, 'line-width': 3 },
+        });
+        this._measureReady = true;
+      },
+      switchTheme(newTheme) {
+        if (newTheme === this.mapTheme) return;
+        this.mapTheme = newTheme;
+        try { localStorage.setItem('cyberdeck:map-theme', newTheme); } catch (e) {}
+        this._measureReady = false;
+        this.map.setStyle(this.styleUrl);
+      },
+      async init() {
+        try {
+          const meta = await fetch(this.tilejsonUrl).then(r => r.json());
+          this.bounds = (meta.bounds && meta.bounds.length === 4) ? meta.bounds : null;
+          this.map = new maplibregl.Map({
+            container: 'map',
+            style: this.styleUrl,
+            center: (meta.center && meta.center.length >= 2) ? [meta.center[0], meta.center[1]] : [0, 0],
+            zoom: (meta.center && meta.center.length >= 3) ? meta.center[2] : 1,
+            attributionControl: false,
+          });
+          this.resetView();
+          this.map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'top-right');
+          this.map.addControl(makeResetZoomControl(this), 'top-right');
+          // Geolocation API only works in secure contexts (https / localhost).
+          // The Pi's default headless mode is plain HTTP over LAN — the
+          // control would render but silently fail. Hide it there.
+          if (window.isSecureContext) {
+            this.map.addControl(new maplibregl.GeolocateControl({
+              positionOptions: { enableHighAccuracy: true },
+              trackUserLocation: true,
+            }), 'top-right');
+          }
+          const measureControl = makeMeasureControl(this);
+          this.map.addControl(measureControl, 'top-right');
+          this.$watch('measureMode', () => measureControl.refresh());
+          this.$watch('_measureReady', () => measureControl.refresh());
+          this.map.addControl(makeThemeControl(this), 'top-right');
+          this.map.addControl(new maplibregl.ScaleControl({ unit: 'metric' }), 'bottom-left');
+          // Attribution moved to bottom-left to free up the bottom-right
+          // corner for the coords overlay bar below.
+          this.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
+          this.map.on('click', (e) => {
+            if (this.measureMode) this.measureAddVertex(e.lngLat.lat, e.lngLat.lng);
+            else this.setPoint(e.lngLat.lat, e.lngLat.lng);
+          });
+          // styledata covers both the initial style load and every setStyle()
+          // afterwards; _attachMeasureLayer is idempotent so firing N times is
+          // safe. Replaces the old map.on('load') which only fired once.
+          this.map.on('styledata', () => this._attachMeasureLayer());
+        } catch (e) {
+          console.error('Map init failed', e);
+        }
+      },
+    }"
+    x-init="init()"
+    @keydown.escape.window="if (measureMode) measureToggle()"
+  >
+    {# Coords overlay: readout / jump-to. Pinned bottom-right.
+       Readout row morphs between coords (with copy) and distance based on
+       measureMode; the measure toggle lives in the top-right control stack.
+       @click.stop keeps taps on the bar from reaching MapLibre's click handler. #}
+    <div
+      class="absolute bottom-3 right-3 z-10 flex flex-col items-stretch gap-1 w-72 pointer-events-none"
+      @click.stop
+    >
+      <div
+        class="pointer-events-auto flex items-stretch border"
+        :class="measureMode ? 'bg-primary-container/10 border-primary-container/40' : 'bg-surface-container border-outline-variant/30'"
+      >
+        <span
+          class="flex-1 min-w-0 flex items-center px-3 font-label text-[10px] tracking-[0.1em] uppercase tabular-nums leading-none truncate"
+          :class="measureMode ? 'text-primary-container' : 'text-on-surface-variant'"
+          x-text="measureMode ? measureFormat() : formatCoord()"
+        ></span>
+        <button
+          x-show="!measureMode"
+          type="button"
+          @click="doCopy()"
+          :disabled="lat === null"
+          :class="lat === null ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary'"
+          class="tac-icon-btn text-on-surface/40 border-l border-outline-variant/30"
+          title="COPY_COORDS"
+          aria-label="Copy coordinates"
+        >
+          <span class="material-symbols-outlined text-[16px]"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">content_copy</span>
+        </button>
+      </div>
+      <div class="pointer-events-auto flex items-stretch bg-surface-container border border-outline-variant/30">
+        <input
+          type="text"
+          x-model="jumpInput"
+          @keydown.enter="doJump()"
+          placeholder="LAT, LON"
+          autocomplete="off"
+          aria-label="Jump to coordinates"
+          class="flex-1 min-w-0 bg-transparent px-3 font-body text-[11px] text-on-surface placeholder:text-on-surface/30 focus:outline-none"
+        >
+        <button
+          type="button"
+          @click="doJump()"
+          :disabled="!map || !jumpInput.trim()"
+          :class="(!map || !jumpInput.trim()) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
+          class="tac-btn font-headline text-[10px] font-bold px-3 border-l border-primary-container/40 text-primary-container tracking-[0.08em]"
+          aria-label="Jump to coordinates"
+        >GO</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

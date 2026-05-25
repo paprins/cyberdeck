@@ -7,7 +7,10 @@
 data/zim/
 data/maps/
 data/downloads/
-!data/packages/registry.json
+data/cache/
+data/content/
+data/packages/registry.json
+data/preferences.json
 .superpowers/
 tailwindcss
 

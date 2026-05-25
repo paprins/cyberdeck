@@ -38,7 +38,7 @@ def test_save_preference_writes_json_atomically(tmp_settings):
 # ── snapshot ──────────────────────────────────────────────────────────────────
 
 def _registry_with(*modules: Module) -> Registry:
-    return Registry(update_server="https://example.com/manifest.json", modules=list(modules))
+    return Registry( modules=list(modules))
 
 
 def test_snapshot_no_modules(tmp_settings):

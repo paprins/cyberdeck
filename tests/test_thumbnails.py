@@ -12,8 +12,8 @@ async def test_cache_thumbnail_writes_png_and_returns_local_url(tmp_settings, mo
     result = await thumbnails.cache_thumbnail(
         "mod1", "https://example.com/x.png", tmp_settings
     )
-    assert result == "/data-static/images/mod1.png"
-    cached = tmp_settings.images_dir / "mod1.png"
+    assert result == "/data-cache/mod1/cover.png"
+    cached = tmp_settings.cache_dir / "mod1" / "cover.png"
     assert cached.read_bytes() == b"\x89PNG\r\n\x1a\nbody"
 
 
@@ -23,7 +23,7 @@ async def test_cache_thumbnail_handles_content_type_with_params(tmp_settings, mo
     monkeypatch.setattr(thumbnails, "_fetch_image", fake_fetch)
 
     result = await thumbnails.cache_thumbnail("mod2", "https://example.com/x", tmp_settings)
-    assert result == "/data-static/images/mod2.jpg"
+    assert result == "/data-cache/mod2/cover.jpg"
 
 
 async def test_cache_thumbnail_returns_none_for_unsupported_mime(tmp_settings, monkeypatch):
@@ -33,7 +33,8 @@ async def test_cache_thumbnail_returns_none_for_unsupported_mime(tmp_settings, m
 
     result = await thumbnails.cache_thumbnail("mod3", "https://example.com/x", tmp_settings)
     assert result is None
-    assert list(tmp_settings.images_dir.glob("mod3.*")) == []
+    assert not (tmp_settings.cache_dir / "mod3").exists() or \
+        list((tmp_settings.cache_dir / "mod3").glob("cover.*")) == []
 
 
 async def test_cache_thumbnail_rejects_svg(tmp_settings, monkeypatch):
@@ -52,7 +53,8 @@ async def test_cache_thumbnail_returns_none_on_network_error(tmp_settings, monke
 
     result = await thumbnails.cache_thumbnail("mod5", "https://example.com/x", tmp_settings)
     assert result is None
-    assert list(tmp_settings.images_dir.glob("mod5.*")) == []
+    assert not (tmp_settings.cache_dir / "mod5").exists() or \
+        list((tmp_settings.cache_dir / "mod5").glob("cover.*")) == []
 
 
 async def test_cache_thumbnail_idempotent_for_local_url(tmp_settings, monkeypatch):
@@ -65,9 +67,9 @@ async def test_cache_thumbnail_idempotent_for_local_url(tmp_settings, monkeypatc
     monkeypatch.setattr(thumbnails, "_fetch_image", fake_fetch)
 
     result = await thumbnails.cache_thumbnail(
-        "mod6", "/data-static/images/mod6.png", tmp_settings
+        "mod6", "/data-cache/mod6/cover.png", tmp_settings
     )
-    assert result == "/data-static/images/mod6.png"
+    assert result == "/data-cache/mod6/cover.png"
     assert calls == []
 
 
@@ -96,11 +98,12 @@ async def test_cache_thumbnail_returns_cached_url_when_url_is_none(tmp_settings,
 
     monkeypatch.setattr(thumbnails, "_fetch_image", fake_fetch)
 
-    tmp_settings.images_dir.mkdir(parents=True, exist_ok=True)
-    (tmp_settings.images_dir / "mod7b.png").write_bytes(b"old")
+    mod_dir = tmp_settings.cache_dir / "mod7b"
+    mod_dir.mkdir(parents=True, exist_ok=True)
+    (mod_dir / "cover.png").write_bytes(b"old")
 
     result = await thumbnails.cache_thumbnail("mod7b", None, tmp_settings)
-    assert result == "/data-static/images/mod7b.png"
+    assert result == "/data-cache/mod7b/cover.png"
     assert calls == []
 
 
@@ -113,24 +116,27 @@ async def test_cache_thumbnail_short_circuits_when_file_exists(tmp_settings, mon
 
     monkeypatch.setattr(thumbnails, "_fetch_image", fake_fetch)
 
-    tmp_settings.images_dir.mkdir(parents=True, exist_ok=True)
-    (tmp_settings.images_dir / "mod8.jpg").write_bytes(b"old")
+    mod_dir = tmp_settings.cache_dir / "mod8"
+    mod_dir.mkdir(parents=True, exist_ok=True)
+    (mod_dir / "cover.jpg").write_bytes(b"old")
 
     result = await thumbnails.cache_thumbnail("mod8", "https://example.com/x", tmp_settings)
-    assert result == "/data-static/images/mod8.jpg"
+    assert result == "/data-cache/mod8/cover.jpg"
     assert calls == []
-    assert (tmp_settings.images_dir / "mod8.jpg").read_bytes() == b"old"
+    assert (mod_dir / "cover.jpg").read_bytes() == b"old"
 
 
-def test_delete_thumbnail_removes_file(tmp_settings):
-    tmp_settings.images_dir.mkdir(parents=True, exist_ok=True)
-    (tmp_settings.images_dir / "mod9.png").write_bytes(b"x")
+def test_delete_thumbnail_removes_cache_dir(tmp_settings):
+    mod_dir = tmp_settings.cache_dir / "mod9"
+    (mod_dir / "images").mkdir(parents=True, exist_ok=True)
+    (mod_dir / "cover.png").write_bytes(b"x")
+    (mod_dir / "images" / "logo.jpg").write_bytes(b"y")
 
     thumbnails.delete_thumbnail("mod9", tmp_settings)
-    assert not (tmp_settings.images_dir / "mod9.png").exists()
+    assert not mod_dir.exists()
 
 
 def test_delete_thumbnail_is_noop_when_missing(tmp_settings):
     thumbnails.delete_thumbnail("ghost", tmp_settings)
-    tmp_settings.images_dir.mkdir(parents=True, exist_ok=True)
+    tmp_settings.cache_dir.mkdir(parents=True, exist_ok=True)
     thumbnails.delete_thumbnail("ghost", tmp_settings)

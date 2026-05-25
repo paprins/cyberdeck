@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="flex-1 overflow-y-auto bg-surface">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-10">
+
+    <nav class="font-headline text-[10px] uppercase tracking-[0.16em] text-on-surface/40 mb-6 flex items-center gap-2">
+      <a href="/" class="hover:text-primary-container">HOME</a>
+      <span class="text-on-surface/20">/</span>
+      <a href="/settings/packages" class="hover:text-primary-container">PACKAGES</a>
+      <span class="text-on-surface/20">/</span>
+      <span class="text-on-surface truncate">{{ module.display_name | replace(' ', '_') | upper }}</span>
+    </nav>
+
+    <article class="cyberdeck-markdown text-on-surface font-body text-[14px] leading-relaxed">
+      {{ rendered_html | safe }}
+    </article>
+
+  </div>
+</div>
+{% endblock %}

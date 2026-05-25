@@ -1,6 +1,6 @@
 from __future__ import annotations
 import asyncio
-from typing import Optional
+from typing import Literal, Optional
 
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse, Response
@@ -16,8 +16,16 @@ from app.models.library import (
     LibraryParseError,
     LibraryUnreachableError,
 )
+import app.services.git_libraries as git_svc
 import app.services.libraries as lib_svc
+import app.services.library_refresh as library_refresh
+import app.services.packages as packages_svc
 import app.services.registry as registry_svc
+
+
+def _svc_for(library_type: str):
+    """Return the backend service module for a library type."""
+    return lib_svc if library_type == "opds" else git_svc
 
 
 def _error_response(exc: LibraryError) -> JSONResponse:
@@ -34,12 +42,14 @@ def _error_response(exc: LibraryError) -> JSONResponse:
 
 class ValidateUrlRequest(BaseModel):
     url: str
+    type: Optional[Literal["opds", "github", "gitlab", "codeberg"]] = None
 
 
 class AddLibraryRequest(BaseModel):
     url: str
     display_name: str
     lang: Optional[str] = None
+    type: Optional[Literal["opds", "github", "gitlab", "codeberg"]] = None
 
 
 class RegisterRequest(BaseModel):
@@ -51,19 +61,48 @@ def make_router(cfg: Settings) -> APIRouter:
 
     @router.post("/api/libraries/validate")
     async def validate(req: ValidateUrlRequest):
+        library_type = req.type or git_svc.detect_type(req.url)
         try:
-            result = await lib_svc.validate_library(req.url)
+            if library_type == "opds":
+                result = await lib_svc.validate_library(req.url)
+            else:
+                result = await git_svc.validate_library(req.url, library_type)
         except LibraryError as e:
             return _error_response(e)
+        result.type = library_type
         return result.model_dump()
 
     @router.post("/api/libraries", status_code=201)
     async def add(req: AddLibraryRequest):
+        library_type = req.type or git_svc.detect_type(req.url)
         try:
-            library = registry_svc.add_library(cfg, req.url, req.display_name, req.lang)
+            library = registry_svc.add_library(
+                cfg, req.url, req.display_name, req.lang, library_type=library_type
+            )
         except LibraryError as e:
             return _error_response(e)
         return library.model_dump()
+
+    @router.post("/api/libraries/refresh")
+    async def refresh():
+        result = await library_refresh.refresh_all_libraries(cfg)
+        return {
+            "refreshed_libraries": result.refreshed_libraries,
+            "updated_modules": result.updated_modules,
+            "errors": result.errors,
+        }
+
+    @router.post("/api/libraries/{library_id}/refresh")
+    async def refresh_one(library_id: str):
+        try:
+            result = await library_refresh.refresh_one_library(library_id, cfg)
+        except LibraryError as e:
+            return _error_response(e)
+        return {
+            "refreshed_libraries": result.refreshed_libraries,
+            "updated_modules": result.updated_modules,
+            "errors": result.errors,
+        }
 
     @router.delete("/api/libraries/{library_id}", status_code=204)
     async def delete(library_id: str):
@@ -80,7 +119,7 @@ def make_router(cfg: Settings) -> APIRouter:
         if library is None:
             return _error_response(LibraryNotFoundError(library_id))
         try:
-            page = await lib_svc.fetch_page(library, start, count)
+            page = await _svc_for(library.type).fetch_page(library, start, count)
         except LibraryError as e:
             return _error_response(e)
         return page.model_dump()
@@ -92,8 +131,9 @@ def make_router(cfg: Settings) -> APIRouter:
         if library is None:
             return _error_response(LibraryNotFoundError(library_id))
 
+        svc = _svc_for(library.type)
         results = await asyncio.gather(
-            *(lib_svc.resolve_entry(entry, library, cfg) for entry in req.entries),
+            *(svc.resolve_entry(entry, library, cfg) for entry in req.entries),
             return_exceptions=True,
         )
 
@@ -106,7 +146,11 @@ def make_router(cfg: Settings) -> APIRouter:
                 registered.append(outcome)
 
         if registered:
-            registry_svc.merge_remote_manifest(cfg, registered)
+            by_id = {m.id: m for m in registry_svc.merge_remote_manifest(cfg, registered)}
+            for remote in registered:
+                module = by_id.get(remote["id"])
+                if module and not module.is_installed:
+                    await packages_svc.start_download(module, cfg)
 
         return {
             "registered": [m["id"] for m in registered],

@@ -11,6 +11,10 @@ from app.services.system import read_system_status
 
 _TEMPLATE_DIR = Path(__file__).parent.parent / "templates"
 
+# Kinds whose viewers already extend base.html. Linking via /view would render
+# the cyberdeck chrome twice (outer page + iframe), so they bypass /view.
+_NATIVE_VIEWER_KINDS = {"static", "mbtiles"}
+
 
 @dataclass
 class ModuleCard:
@@ -19,8 +23,11 @@ class ModuleCard:
 
 
 def _external_url(module: Module) -> str | None:
-    if module.category == "maps":
-        return "/maps/"
+    if module.kind == "mbtiles":
+        return f"/map/{module.id}"
+    if module.kind == "static":
+        entry = module.entry or "index.md"
+        return f"/content/{module.id}/{entry}"
     if module.category == "internet":
         return "https://duckduckgo.com"
     if module.category != "packages":
@@ -32,7 +39,9 @@ def _tile_url(module: Module) -> str:
     if module.category == "packages":
         return "/settings/packages"
     ext = _external_url(module)
-    return f"/view?url={ext}" if ext else "/settings/packages"
+    if not ext:
+        return "/settings/packages"
+    return ext if module.kind in _NATIVE_VIEWER_KINDS else f"/view?url={ext}"
 
 
 def make_router(cfg: Settings) -> APIRouter:

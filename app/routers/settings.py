@@ -1,14 +1,16 @@
 from __future__ import annotations
+import asyncio
 from dataclasses import asdict
 from pathlib import Path
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse, Response
+from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
 from app.config import Settings
 from app.services.connectivity import request_immediate_probe
 from app.services.diagnostics import read_diagnostics
+from app.services.library_refresh import maybe_refresh_libraries
 from app.services.notifications import (
     effective_check_for_updates,
     effective_connectivity_check,
@@ -62,13 +64,18 @@ def make_router(cfg: Settings) -> APIRouter:
             await request_immediate_probe()
         return Response(status_code=204)
 
-    @router.get("/settings", response_class=HTMLResponse)
-    async def settings_page(request: Request):
-        registry = load_registry(cfg)
+    @router.get("/settings")
+    async def settings_index():
+        # Land on the first tab (STATUS) — it's the dashboard view most users
+        # want when they click the global Settings affordance. The device
+        # preferences panel lives at /settings/preferences.
+        return RedirectResponse(url="/settings/status", status_code=307)
+
+    @router.get("/settings/preferences", response_class=HTMLResponse)
+    async def settings_preferences(request: Request):
         return templates.TemplateResponse(request, "settings.html", {
             "active_tab": "settings",
             "upgrade_status": read_status(cfg).model_dump(mode="json"),
-            "libraries": [lib.model_dump() for lib in registry.libraries],
             **_sys_ctx(),
         })
 
@@ -83,36 +90,27 @@ def make_router(cfg: Settings) -> APIRouter:
 
     @router.get("/settings/packages", response_class=HTMLResponse)
     async def settings_packages(request: Request):
+        sys_ctx = _sys_ctx()
+        if sys_ctx["check_for_updates"] and sys_ctx["wifi_connected"]:
+            asyncio.create_task(maybe_refresh_libraries(cfg))
         registry = load_registry(cfg)
         storage = get_storage_info(cfg)
         all_statuses = {m.id: get_download_status(m, cfg) for m in registry.modules}
 
         _in_flight = ("downloading", "interrupted", "checksum_mismatch", "queued")
-        updates = [
-            m for m in registry.modules
-            if m.has_update and all_statuses[m.id]["status"] not in _in_flight
-        ]
         installed = [
             m for m in registry.modules
-            if (m.is_installed and not m.has_update)
-            or all_statuses[m.id]["status"] in _in_flight
-        ]
-        available = [
-            m for m in registry.modules
-            if not m.is_installed
-            and not m.has_update
-            and all_statuses[m.id]["status"] == "not_installed"
+            if m.is_installed or all_statuses[m.id]["status"] in _in_flight
         ]
 
         return templates.TemplateResponse(request, "settings.html", {
             "active_tab": "packages",
-            "updates": updates,
             "installed": installed,
-            "available": available,
             "module_statuses": all_statuses,
             "storage": storage,
+            "libraries": [lib.model_dump() for lib in registry.libraries],
             "has_active_download": bool(_active_tasks),
-            **_sys_ctx(),
+            **sys_ctx,
         })
 
     return router

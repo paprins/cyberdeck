@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     kiwix_port: int = 8080
     mbtiles_port: int = 8081
     install_root: Path = Path("/opt/cyberdeck")
+    release_pubkey_path: Path = Path("/etc/cyberdeck/release.pub")
     github_repo: str = "paprins/cyberdeck"
     upgrade_versions_keep: int = 3
     check_for_updates: bool = True
@@ -31,8 +32,18 @@ class Settings(BaseSettings):
         return self.data_dir / "downloads"
 
     @property
+    def content_dir(self) -> Path:
+        return self.data_dir / "content"
+
+    @property
     def images_dir(self) -> Path:
         return self.data_dir / "static" / "images"
+
+    @property
+    def cache_dir(self) -> Path:
+        """Per-module cache root. Each module's images/etc live under
+        ``cache_dir/{module_id}/`` and are exposed at ``/data-cache/...``."""
+        return self.data_dir / "cache"
 
     @property
     def registry_path(self) -> Path:

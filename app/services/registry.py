@@ -9,13 +9,10 @@ from app.models.library import (
 )
 from app.models.registry import Module, Registry
 
-_DEFAULT_UPDATE_SERVER = ""
-
-
 def load_registry(settings: Settings) -> Registry:
     path = settings.registry_path
     if not path.exists():
-        reg = Registry(update_server=_DEFAULT_UPDATE_SERVER)
+        reg = Registry()
         save_registry(settings, reg)
         return reg
     return Registry.model_validate_json(path.read_text())
@@ -43,26 +40,31 @@ def set_module_active(settings: Settings, module_id: str, active: bool) -> None:
 
 def merge_remote_manifest(
     settings: Settings, remote_modules: list[dict[str, Any]]
-) -> None:
+) -> list[Module]:
     registry = load_registry(settings)
     existing = {m.id: m for m in registry.modules}
     for remote in remote_modules:
         module_id = remote["id"]
         if module_id in existing:
             current = existing[module_id]
-            updated = Module(
-                **{
-                    **remote,
-                    "installed_version": current.installed_version,
-                    "installed_checksum": current.installed_checksum,
-                    "active": current.active,
-                }
-            )
+            overrides = {
+                "installed_version": current.installed_version,
+                "installed_checksum": current.installed_checksum,
+                "active": current.active,
+            }
+            # Preserve the locally-resolved bundled image (set at install time
+            # by _resolve_bundled_image) when the manifest doesn't ship an
+            # HTTP image_url. Without this, every refresh would clear the
+            # image we copied from inside the package tarball.
+            if not remote.get("image") and current.image:
+                overrides["image"] = current.image
+            updated = Module(**{**remote, **overrides})
             existing[module_id] = updated
         else:
             existing[module_id] = Module(**remote)
     registry.modules = list(existing.values())
     save_registry(settings, registry)
+    return registry.modules
 
 
 def list_libraries(settings: Settings) -> list[Library]:
@@ -74,9 +76,15 @@ def add_library(
     url: str,
     display_name: str,
     lang: Optional[str] = None,
+    library_type: str = "opds",
 ) -> Library:
-    from app.services.libraries import normalize_opds_url
-    canonical_url, lang_from_url = normalize_opds_url(url)
+    if library_type == "opds":
+        from app.services.libraries import normalize_opds_url
+        canonical_url, lang_from_url = normalize_opds_url(url)
+    else:
+        from app.services.git_libraries import normalize_git_url
+        canonical_url = normalize_git_url(url, library_type)
+        lang_from_url = None
     registry = load_registry(settings)
     for existing in registry.libraries:
         if existing.url == canonical_url:
@@ -86,6 +94,7 @@ def add_library(
         display_name=display_name,
         url=canonical_url,
         lang=lang or lang_from_url,
+        type=library_type,
     )
     registry.libraries.append(library)
     save_registry(settings, registry)
