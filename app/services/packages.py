@@ -25,6 +25,8 @@ _pending: list[str] = []
 def _final_path(module: Module, settings: Settings) -> Path:
     if module.kind == "mbtiles":
         return settings.maps_dir / f"{module.id}.mbtiles"
+    if module.kind == "routing":
+        return settings.routing_dir / f"{module.id}.tar"
     if module.kind == "static":
         return settings.content_dir / module.id
     return settings.zim_dir / f"{module.id}.zim"
@@ -166,7 +168,7 @@ async def uninstall_module(module: Module, settings: Settings) -> None:
     _sig_path(module, settings).unlink(missing_ok=True)
     if module.kind == "zim":
         _kiwix_remove(module, settings)
-    _signal_service(module)
+    _signal_service(module, settings)
     # Cached images and any other per-module cache state go too — the row is
     # being removed; nothing else references the cache dir.
     from app.services.thumbnails import delete_thumbnail
@@ -181,7 +183,7 @@ async def activate_module(module: Module, settings: Settings) -> None:
     set_module_active(settings, module.id, True)
     if module.kind == "zim":
         _kiwix_add(module, settings)
-    _signal_service(module)
+    _signal_service(module, settings)
 
 
 async def deactivate_module(module: Module, settings: Settings) -> None:
@@ -189,7 +191,7 @@ async def deactivate_module(module: Module, settings: Settings) -> None:
     set_module_active(settings, module.id, False)
     if module.kind == "zim":
         _kiwix_remove(module, settings)
-    _signal_service(module)
+    _signal_service(module, settings)
 
 
 async def accept_checksum_mismatch(module: Module, settings: Settings) -> None:
@@ -212,7 +214,7 @@ async def accept_checksum_mismatch(module: Module, settings: Settings) -> None:
     save_registry(settings, registry)
     if module.kind == "zim":
         _kiwix_add(module, settings)
-    _signal_service(module)
+    _signal_service(module, settings)
 
 
 async def discard_checksum_mismatch(module: Module, settings: Settings) -> None:
@@ -324,9 +326,54 @@ def _kiwix_remove(module: Module, settings: Settings) -> None:
     _run(["pkill", "-HUP", "kiwix-serve"])
 
 
-def _signal_service(module: Module) -> None:
+def _signal_service(module: Module, settings: Settings) -> None:
     if module.kind == "mbtiles":
         _run(["pkill", "-HUP", "mbtileserver"])
+    elif module.kind == "routing":
+        reconcile_active_routing(settings)
+
+
+def reconcile_active_routing(settings: Settings) -> None:
+    """Make the staged Valhalla extract match the registry: stage the active,
+    installed routing module's ``{id}.tar`` as ``valhalla_tiles.tar`` (a same-dir
+    relative symlink) and restart Valhalla, or unstage if none is active.
+
+    Valhalla loads a single tile extract at startup and does not hot-reload, so a
+    dataset swap is only picked up by restarting the process. Idempotent and
+    best-effort — mirrors the acknowledged service-config integration gap that
+    already exists for kiwix/mbtileserver.
+    """
+    active_tar = settings.active_routing_tar
+    registry = load_registry(settings)
+    chosen = next(
+        (
+            m for m in registry.modules
+            if m.kind == "routing" and m.is_installed and m.active
+            and (settings.routing_dir / f"{m.id}.tar").exists()
+        ),
+        None,
+    )
+
+    if chosen is None:
+        if active_tar.is_symlink() or active_tar.exists():
+            active_tar.unlink()
+            _restart_valhalla()
+        return
+
+    target_name = f"{chosen.id}.tar"
+    if active_tar.is_symlink() and active_tar.readlink().name == target_name:
+        return  # already staged
+    active_tar.parent.mkdir(parents=True, exist_ok=True)
+    if active_tar.is_symlink() or active_tar.exists():
+        active_tar.unlink()
+    active_tar.symlink_to(target_name)  # relative, same dir → resolves in-container
+    _restart_valhalla()
+
+
+def _restart_valhalla() -> None:
+    """Best-effort restart so a new tile extract is loaded. Tries the dev compose
+    service first, then a host service; both no-op cleanly when absent."""
+    _run(["docker", "compose", "restart", "valhalla"])
 
 
 def _run(cmd: list[str]) -> None:
@@ -442,7 +489,7 @@ async def _finalize_hashed(module: Module, settings: Settings, part: Path) -> No
 
     if module.kind == "zim":
         _kiwix_add(module, settings)
-    _signal_service(module)
+    _signal_service(module, settings)
 
 
 async def _finalize_static(module: Module, settings: Settings, part: Path) -> None:

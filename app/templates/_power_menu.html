@@ -1,5 +1,7 @@
 <!-- ── Power menu ── -->
-<div class="relative" x-data="{
+<div class="relative"
+     @dropdown-open.window="if ($event.detail.id !== 'power') open = false"
+     x-data="{
   open: false,
   pending: null,
   busy: false,
@@ -55,7 +57,7 @@
 
   <!-- Trigger -->
   <button type="button"
-          @click="open = !open"
+          @click="open = !open; if (open) $dispatch('dropdown-open', {id: 'power'})"
           :class="open ? 'text-primary' : 'hover:text-primary'"
           class="tac-icon-btn"
           title="Power">
@@ -65,24 +67,24 @@
 
   <!-- Dropdown -->
   <div x-show="open" x-cloak @click.outside="open = false"
-       class="absolute top-full right-0 mt-1 bg-surface-container border border-outline-variant/30 z-50 min-w-[200px] max-w-[calc(100vw-1rem)]">
+       class="absolute top-full right-0 mt-1 bg-surface-container border border-outline-variant/30 z-50 min-w-[260px] max-w-[calc(100vw-1rem)]">
     <button @click="pick('restart')" type="button"
-            class="w-full flex items-center gap-3 px-4 py-3 border-b border-outline-variant/15 hover:bg-surface-container-high text-on-surface text-left">
-      <span class="material-symbols-outlined text-[18px]"
+            class="w-full flex items-center gap-4 px-5 py-4 border-b border-outline-variant/15 hover:bg-surface-container-high text-on-surface text-left">
+      <span class="material-symbols-outlined text-[22px]"
             style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">refresh</span>
-      <span class="font-headline text-[10px] tracking-[0.08em] uppercase">RESTART_CONTENT</span>
+      <span class="font-headline text-[14px] tracking-[0.08em] uppercase">RESTART_CONTENT</span>
     </button>
     <button @click="pick('reboot')" type="button"
-            class="w-full flex items-center gap-3 px-4 py-3 border-b border-outline-variant/15 hover:bg-surface-container-high text-on-surface text-left">
-      <span class="material-symbols-outlined text-[18px]"
+            class="w-full flex items-center gap-4 px-5 py-4 border-b border-outline-variant/15 hover:bg-surface-container-high text-on-surface text-left">
+      <span class="material-symbols-outlined text-[22px]"
             style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">restart_alt</span>
-      <span class="font-headline text-[10px] tracking-[0.08em] uppercase">REBOOT</span>
+      <span class="font-headline text-[14px] tracking-[0.08em] uppercase">REBOOT</span>
     </button>
     <button @click="pick('shutdown')" type="button"
-            class="w-full flex items-center gap-3 px-4 py-3 hover:bg-error/10 text-error text-left">
-      <span class="material-symbols-outlined text-[18px]"
+            class="w-full flex items-center gap-4 px-5 py-4 hover:bg-error/10 text-error text-left">
+      <span class="material-symbols-outlined text-[22px]"
             style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">power_settings_new</span>
-      <span class="font-headline text-[10px] tracking-[0.08em] uppercase">SHUTDOWN</span>
+      <span class="font-headline text-[14px] tracking-[0.08em] uppercase">SHUTDOWN</span>
     </button>
   </div>
 
@@ -92,14 +94,14 @@
        @click.self="if (!busy) closeModal()"
        class="fixed inset-0 z-50 bg-background/88 flex items-center justify-center p-4">
     <div class="bg-surface-container-lowest border border-outline-variant/60 p-6 w-full max-w-sm" @click.stop>
-      <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-primary-container mb-3"
+      <div class="font-headline font-bold text-[13px] uppercase tracking-[0.16em] text-primary-container mb-3"
            x-text="labels[pending]?.title"></div>
-      <p class="font-body text-[12px] text-on-surface/60 mb-6" x-text="labels[pending]?.body"></p>
+      <p class="font-body text-[14px] text-on-surface/70 mb-6 leading-relaxed" x-text="labels[pending]?.body"></p>
 
-      <div x-show="error" x-cloak class="font-headline text-[10px] tracking-[0.08em] text-error mb-3 uppercase">
+      <div x-show="error" x-cloak class="font-headline text-[12px] tracking-[0.08em] text-error mb-3 uppercase">
         <span x-text="error"></span>
       </div>
-      <div x-show="done" x-cloak class="font-headline text-[10px] tracking-[0.08em] text-tertiary mb-3 uppercase">
+      <div x-show="done" x-cloak class="font-headline text-[12px] tracking-[0.08em] text-tertiary mb-3 uppercase">
         CONTENT_RESTARTED
       </div>
 
@@ -107,13 +109,13 @@
         <button @click="closeModal()"
                 :disabled="busy"
                 :class="busy ? 'opacity-40 cursor-not-allowed' : 'hover:bg-surface-container-high'"
-                class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40">
+                class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-outline-variant/30 text-on-surface/40">
           <span x-text="done ? 'CLOSE' : 'CANCEL'"></span>
         </button>
         <button x-show="!done" @click="confirm()"
                 :disabled="busy"
                 :class="busy ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-                class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-primary-container/50 text-primary-container">
+                class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-primary-container/50 text-primary-container">
           <span x-show="!busy" x-text="labels[pending]?.confirm"></span>
           <span x-show="busy" x-cloak>...</span>
         </button>

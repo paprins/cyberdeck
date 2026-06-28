@@ -10,11 +10,13 @@ from app.services.search import search_modules, kiwix_suggestions
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
-def _mod(id: str, category: str, active: bool = True) -> Module:
+def _mod(id: str, category: str, active: bool = True, kind: str = "zim") -> Module:
     return Module(
         id=id, display_name=id.replace("-", " ").title(), category=category,
         description=f"{id} description", latest_version="2024-01",
-        size_gb=1.0, checksum="sha256:abc", active=active,
+        size_gb=1.0, kind=kind, active=active,
+        checksum="sha256:abc" if kind in ("zim", "mbtiles") else None,
+        signature_url="https://x/" if kind == "static" else None,
     )
 
 
@@ -83,20 +85,16 @@ async def test_search_modules_returns_results():
 
 
 async def test_search_modules_excludes_maps():
-    modules = [_mod("maps-world", "maps")]
+    # mbtiles maps have no kiwix full-text index.
+    modules = [_mod("maps-world", "navigation", kind="mbtiles")]
     results = await search_modules("world", modules, 8080, _MockClient({}))
     assert results == []
 
 
-async def test_search_modules_excludes_packages():
-    modules = [_mod("_packages", "packages")]
-    results = await search_modules("pkg", modules, 8080, _MockClient({}))
-    assert results == []
-
-
-async def test_search_modules_excludes_internet():
-    modules = [_mod("_internet", "internet")]
-    results = await search_modules("web", modules, 8080, _MockClient({}))
+async def test_search_modules_excludes_static():
+    # static packages aren't served through kiwix either.
+    modules = [_mod("first-aid", "medical", kind="static")]
+    results = await search_modules("aid", modules, 8080, _MockClient({}))
     assert results == []
 
 
@@ -121,7 +119,7 @@ async def test_search_modules_result_url_contains_query():
 async def test_search_modules_aggregates_multiple_modules():
     modules = [
         _mod("medical-wikimed", "medical"),
-        _mod("survival-wikihow", "survival"),
+        _mod("survival-wikihow", "reference"),
     ]
     client = _MockClient({
         "medical-wikimed": ["CPR"],

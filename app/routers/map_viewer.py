@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from fastapi.templating import Jinja2Templates
 
 from app.config import Settings
+from app.routers.routing import find_active_routing
 from app.services.registry import load_registry
 from app.services.system import read_system_status
 
@@ -99,6 +100,7 @@ def make_router(cfg: Settings) -> APIRouter:
         status = read_system_status(cfg)
         return templates.TemplateResponse(request, "map_viewer.html", {
             "module": module,
+            "routing_available": find_active_routing(cfg, module.id) is not None,
             "battery_pct": status.battery_pct,
             "battery_charging": status.battery_charging,
             "wifi_connected": status.wifi_connected,

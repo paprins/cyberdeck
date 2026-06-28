@@ -266,6 +266,35 @@ async def test_resolve_entry_returns_module_dict(
     assert result["signature_url"].endswith(".minisig")
     assert result["entry"] == "index.md"
     assert result["size_gb"] == round(4_194_304 / (1024 ** 3), 3)
+    # The manifest's category flows through to the module.
+    assert result["category"] == "medical"
+
+
+async def test_resolve_entry_coerces_unknown_category(monkeypatch, tmp_settings):
+    # A manifest category outside the fixed set must not crash registration —
+    # it falls back to the reference slug instead of raising.
+    manifest = {
+        "title": "X",
+        "packages": [{
+            "id": "almanac",
+            "display_name": "Almanac",
+            "description": "",
+            "category": "history",  # not one of the 11 slugs
+            "version": "1",
+            "size_bytes": 1024,
+            "tarball_url": "https://github.com/o/r/releases/download/v1/a.tar.gz",
+            "signature_url": "https://github.com/o/r/releases/download/v1/a.tar.gz.minisig",
+            "entry": "index.md",
+        }],
+    }
+    async def fake(_url): return manifest
+    async def no_cache(*_a, **_kw): return None
+    monkeypatch.setattr(svc, "_fetch_manifest", fake)
+    monkeypatch.setattr("app.services.git_libraries.cache_thumbnail", no_cache)
+    library = Library(id="L1", display_name="x", url="o/r", type="github")
+    entry = (await svc.fetch_page(library, 0, 10)).entries[0]
+    result = await svc.resolve_entry(entry, library, tmp_settings)
+    assert result["category"] == "reference"
 
 
 @pytest.mark.parametrize("git_type", ["github", "gitlab", "codeberg"])

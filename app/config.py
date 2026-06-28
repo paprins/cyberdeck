@@ -7,6 +7,7 @@ class Settings(BaseSettings):
     app_port: int = 8000
     kiwix_port: int = 8080
     mbtiles_port: int = 8081
+    valhalla_port: int = 8082
     install_root: Path = Path("/opt/cyberdeck")
     release_pubkey_path: Path = Path("/etc/cyberdeck/release.pub")
     github_repo: str = "paprins/cyberdeck"
@@ -26,6 +27,19 @@ class Settings(BaseSettings):
     @property
     def maps_dir(self) -> Path:
         return self.data_dir / "maps"
+
+    @property
+    def routing_dir(self) -> Path:
+        return self.data_dir / "routing"
+
+    @property
+    def active_routing_tar(self) -> Path:
+        """The single tile extract Valhalla serves, staged as a same-dir symlink
+        to the active region's ``{id}.tar``. Valhalla loads exactly one extract
+        and does not hot-reload, so switching regions restages this and restarts.
+        Kept inside ``routing_dir`` (mounted whole at ``/custom_files``) so the
+        relative symlink still resolves inside the container."""
+        return self.routing_dir / "valhalla_tiles.tar"
 
     @property
     def downloads_dir(self) -> Path:

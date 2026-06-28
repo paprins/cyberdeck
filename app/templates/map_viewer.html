@@ -85,6 +85,45 @@
     };
   }
 
+  // IControl that opens/closes the navigation panel. Icon goes signal-orange
+  // while the panel is open (active operational state). Only added to the map
+  // when routing data is available for this region.
+  function makeNavControl(cmp) {
+    let container, btn, iconSpan;
+    const render = () => {
+      if (!iconSpan) return;
+      iconSpan.style.color = cmp.navOpen
+        ? 'var(--color-primary-container)'
+        : 'var(--color-on-surface)';
+    };
+    return {
+      onAdd() {
+        container = document.createElement('div');
+        container.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'cd-map-nav-btn';
+        btn.setAttribute('aria-label', 'Toggle navigation');
+        btn.title = 'TOGGLE_NAVIGATION';
+        iconSpan = document.createElement('span');
+        iconSpan.className = 'material-symbols-outlined';
+        iconSpan.setAttribute('style',
+          "font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20;" +
+          "font-size:18px;");
+        iconSpan.textContent = 'directions';
+        btn.appendChild(iconSpan);
+        btn.addEventListener('click', () => { cmp.navToggle(); render(); });
+        container.appendChild(btn);
+        render();
+        return container;
+      },
+      onRemove() {
+        container.parentNode?.removeChild(container);
+      },
+      refresh: render,
+    };
+  }
+
   function makeThemeControl(cmp) {
     let container;
     const iconFor = (theme) => theme === 'dark' ? 'light_mode' : 'dark_mode';
@@ -145,6 +184,18 @@
       measureVertices: [],
       _measureReady: false,
       _measureMarkers: [],
+      navAvailable: {{ 'true' if routing_available else 'false' }},
+      navOpen: false,
+      navPick: null,        // 'a' | 'b' | null — which point the next tap fills
+      aText: '',
+      bText: '',
+      pointA: null,
+      pointB: null,
+      _markerA: null,
+      _markerB: null,
+      profile: 'car',       // 'walk' | 'bike' | 'car'
+      route: null,          // { summary, geometry, maneuvers }
+      routeLoading: false,
       mapTheme: (typeof localStorage !== 'undefined' && localStorage.getItem('cyberdeck:map-theme')) || 'dark',
       tilejsonUrl: '/maps/{{ module.id }}',
       get styleUrl() { return '/map/{{ module.id }}/style.json?theme=' + this.mapTheme; },
@@ -267,8 +318,139 @@
       },
       measureToggle() {
         if (!this._measureReady) return;
+        // Nav and measure are mutually exclusive modes.
+        if (!this.measureMode && this.navOpen) this.navToggle();
         if (this.measureMode) this.measureClear();
         this.measureMode = !this.measureMode;
+      },
+      navToggle() {
+        this.navOpen = !this.navOpen;
+        if (this.navOpen) {
+          // Nav and measure are mutually exclusive modes.
+          if (this.measureMode) this.measureToggle();
+          if (!this.aText && !this.bText) this.navPick = 'a';
+        } else {
+          this.navPick = null;
+        }
+      },
+      navArm(slot) {
+        this.navPick = this.navPick === slot ? null : slot;
+      },
+      _fmtLatLon(lat, lon) {
+        return lat.toFixed(5) + ', ' + lon.toFixed(5);
+      },
+      _placeRouteMarker(slot, lat, lon) {
+        const key = slot === 'a' ? '_markerA' : '_markerB';
+        if (this[key]) this[key].remove();
+        const el = document.createElement('div');
+        el.className = 'cd-route-marker cd-route-marker--' + slot;
+        el.textContent = slot.toUpperCase();
+        this[key] = new maplibregl.Marker({ element: el, anchor: 'center' })
+          .setLngLat([lon, lat]).addTo(this.map);
+      },
+      navSetPoint(slot, lat, lon) {
+        const text = this._fmtLatLon(lat, lon);
+        if (slot === 'a') { this.aText = text; this.pointA = { lat, lon }; }
+        else { this.bText = text; this.pointB = { lat, lon }; }
+        this._placeRouteMarker(slot, lat, lon);
+      },
+      navUseCurrent(slot) {
+        if (this.lat === null) { this._toast('warning', 'NO_POINT', 'TAP_MAP_FIRST'); return; }
+        this.navSetPoint(slot, this.lat, this.lon);
+      },
+      _routeGeoJSON(geometry) {
+        if (!geometry || !geometry.coordinates || geometry.coordinates.length < 2)
+          return { type: 'FeatureCollection', features: [] };
+        return { type: 'FeatureCollection', features: [{ type: 'Feature', geometry }] };
+      },
+      _drawRoute(geometry) {
+        const src = this.map.getSource('route-line');
+        if (src) src.setData(this._routeGeoJSON(geometry));
+        if (geometry && geometry.coordinates && geometry.coordinates.length >= 2) {
+          const lons = geometry.coordinates.map(c => c[0]);
+          const lats = geometry.coordinates.map(c => c[1]);
+          this.map.fitBounds(
+            [[Math.min(...lons), Math.min(...lats)], [Math.max(...lons), Math.max(...lats)]],
+            { padding: 60, animate: false }
+          );
+        }
+      },
+      async navGo() {
+        const a = this.parseCoords(this.aText);
+        const b = this.parseCoords(this.bText);
+        if (!a) { this._toast('warning', 'INVALID_START', 'CHECK_POINT_A'); return; }
+        if (!b) { this._toast('warning', 'INVALID_DEST', 'CHECK_POINT_B'); return; }
+        // Re-place markers so they match the (possibly typed) parsed coords.
+        this.navSetPoint('a', a.lat, a.lon);
+        this.navSetPoint('b', b.lat, b.lon);
+        this.navPick = null;
+        this.routeLoading = true;
+        this.route = null;
+        this._drawRoute(null);
+        try {
+          const url = '/map/{{ module.id }}/route'
+            + '?from=' + a.lat + ',' + a.lon
+            + '&to=' + b.lat + ',' + b.lon
+            + '&mode=' + this.profile;
+          const r = await fetch(url);
+          const data = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            const detail = (data.error || 'NO_ROUTE_FOUND').toUpperCase().replace(/ /g, '_').slice(0, 40);
+            this._toast('error', 'NO_ROUTE', detail);
+            return;
+          }
+          if (!data.maneuvers || !data.maneuvers.length) {
+            this._toast('error', 'NO_ROUTE', 'NO_PATH_FOUND');
+            return;
+          }
+          this.route = data;
+          this._drawRoute(data.geometry);
+        } catch (e) {
+          this._toast('error', 'ROUTE_FAILED', 'ROUTING_ENGINE_OFFLINE');
+        } finally {
+          this.routeLoading = false;
+        }
+      },
+      navClear() {
+        this.aText = ''; this.bText = '';
+        this.pointA = null; this.pointB = null;
+        if (this._markerA) { this._markerA.remove(); this._markerA = null; }
+        if (this._markerB) { this._markerB.remove(); this._markerB = null; }
+        this.route = null;
+        if (this.map) this._drawRoute(null);
+        this.navPick = 'a';
+      },
+      maneuverIcon(t) {
+        const m = {
+          1:'trip_origin', 2:'trip_origin', 3:'trip_origin',
+          4:'sports_score', 5:'sports_score', 6:'sports_score',
+          8:'straight',
+          9:'turn_slight_right', 10:'turn_right', 11:'turn_sharp_right',
+          12:'u_turn_left', 13:'u_turn_right',
+          14:'turn_sharp_left', 15:'turn_left', 16:'turn_slight_left',
+          17:'straight', 18:'fork_right', 19:'fork_left',
+          20:'fork_right', 21:'fork_left',
+          23:'fork_right', 24:'fork_left',
+          25:'merge', 26:'roundabout_right', 27:'roundabout_right',
+          37:'merge',
+        };
+        return m[t] || 'straight';
+      },
+      fmtKm(km) {
+        if (km == null) return '';
+        return km < 1 ? Math.round(km * 1000) + '_M' : km.toFixed(1) + '_KM';
+      },
+      fmtDuration(s) {
+        const min = Math.round(s / 60);
+        if (min < 1) return '<1_MIN';
+        if (min < 60) return min + '_MIN';
+        const h = Math.floor(min / 60);
+        return h + 'H_' + String(min % 60).padStart(2, '0') + 'M';
+      },
+      onEscape() {
+        if (this.navPick) { this.navPick = null; return; }
+        if (this.navOpen) { this.navToggle(); return; }
+        if (this.measureMode) this.measureToggle();
       },
       resetView() {
         if (!this.map || !this.bounds) return;
@@ -277,24 +459,38 @@
           { padding: 20, animate: false }
         );
       },
-      _attachMeasureLayer() {
-        // styledata fires repeatedly (mid-load + each tile fetch); two guards
-        // keep this idempotent: bail if the style isn't finished loading, or
-        // if the source is already attached for this style.
+      _attachOverlayLayers() {
+        // styledata fires repeatedly (mid-load + each tile fetch) and after
+        // every setStyle(); per-source guards keep this idempotent. setStyle
+        // wipes added sources, so the route is re-seeded from this.route here.
         if (!this.map.isStyleLoaded()) return;
-        if (this.map.getSource('measure-line')) return;
         const lineColor = getComputedStyle(document.documentElement)
           .getPropertyValue('--color-primary-container').trim();
-        this.map.addSource('measure-line', {
-          type: 'geojson',
-          data: this._measureGeoJSON(),
-        });
-        this.map.addLayer({
-          id: 'measure-line',
-          type: 'line',
-          source: 'measure-line',
-          paint: { 'line-color': lineColor, 'line-width': 3 },
-        });
+        if (!this.map.getSource('measure-line')) {
+          this.map.addSource('measure-line', {
+            type: 'geojson',
+            data: this._measureGeoJSON(),
+          });
+          this.map.addLayer({
+            id: 'measure-line',
+            type: 'line',
+            source: 'measure-line',
+            paint: { 'line-color': lineColor, 'line-width': 3 },
+          });
+        }
+        if (!this.map.getSource('route-line')) {
+          this.map.addSource('route-line', {
+            type: 'geojson',
+            data: this._routeGeoJSON(this.route && this.route.geometry),
+          });
+          this.map.addLayer({
+            id: 'route-line',
+            type: 'line',
+            source: 'route-line',
+            layout: { 'line-cap': 'round', 'line-join': 'round' },
+            paint: { 'line-color': lineColor, 'line-width': 5 },
+          });
+        }
         this._measureReady = true;
       },
       switchTheme(newTheme) {
@@ -327,6 +523,11 @@
               trackUserLocation: true,
             }), 'top-right');
           }
+          if (this.navAvailable) {
+            const navControl = makeNavControl(this);
+            this.map.addControl(navControl, 'top-right');
+            this.$watch('navOpen', () => navControl.refresh());
+          }
           const measureControl = makeMeasureControl(this);
           this.map.addControl(measureControl, 'top-right');
           this.$watch('measureMode', () => measureControl.refresh());
@@ -337,26 +538,35 @@
           // corner for the coords overlay bar below.
           this.map.addControl(new maplibregl.AttributionControl({ compact: true }), 'bottom-left');
           this.map.on('click', (e) => {
-            if (this.measureMode) this.measureAddVertex(e.lngLat.lat, e.lngLat.lng);
-            else this.setPoint(e.lngLat.lat, e.lngLat.lng);
+            if (this.measureMode) {
+              this.measureAddVertex(e.lngLat.lat, e.lngLat.lng);
+            } else if (this.navOpen && this.navPick) {
+              const slot = this.navPick;
+              this.navSetPoint(slot, e.lngLat.lat, e.lngLat.lng);
+              // Auto-advance A → B so two taps set a full route.
+              this.navPick = (slot === 'a' && !this.bText) ? 'b' : null;
+            } else {
+              this.setPoint(e.lngLat.lat, e.lngLat.lng);
+            }
           });
           // styledata covers both the initial style load and every setStyle()
-          // afterwards; _attachMeasureLayer is idempotent so firing N times is
+          // afterwards; _attachOverlayLayers is idempotent so firing N times is
           // safe. Replaces the old map.on('load') which only fired once.
-          this.map.on('styledata', () => this._attachMeasureLayer());
+          this.map.on('styledata', () => this._attachOverlayLayers());
         } catch (e) {
           console.error('Map init failed', e);
         }
       },
     }"
     x-init="init()"
-    @keydown.escape.window="if (measureMode) measureToggle()"
+    @keydown.escape.window="onEscape()"
   >
     {# Coords overlay: readout / jump-to. Pinned bottom-right.
        Readout row morphs between coords (with copy) and distance based on
        measureMode; the measure toggle lives in the top-right control stack.
        @click.stop keeps taps on the bar from reaching MapLibre's click handler. #}
     <div
+      x-show="!navOpen"
       class="absolute bottom-3 right-3 z-10 flex flex-col items-stretch gap-1 w-72 pointer-events-none"
       @click.stop
     >
@@ -401,6 +611,137 @@
           class="tac-btn font-headline text-[10px] font-bold px-3 border-l border-primary-container/40 text-primary-container tracking-[0.08em]"
           aria-label="Jump to coordinates"
         >GO</button>
+      </div>
+    </div>
+
+    {# Navigation panel. Bottom-sheet on phones (thumb reach), left-docked side
+       panel on sm+. Opened from the top-right control stack; only rendered when
+       routing data is available for this region. @click.stop keeps panel taps
+       off the map canvas. #}
+    <div
+      x-show="navOpen"
+      x-cloak
+      @click.stop
+      class="absolute z-20 flex flex-col bg-surface-container border-outline-variant/30
+             inset-x-0 bottom-0 max-h-[62vh] border-t
+             sm:inset-x-auto sm:left-3 sm:top-3 sm:bottom-3 sm:w-80 sm:max-h-none sm:border"
+    >
+      <div class="flex items-center gap-2 px-3 h-12 border-b border-outline-variant/20 flex-shrink-0">
+        <span class="material-symbols-outlined text-[18px] text-primary-container"
+              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">directions</span>
+        <span class="flex-1 font-headline text-[12px] font-bold uppercase tracking-[0.12em] text-on-surface">NAVIGATE</span>
+        <button type="button" @click="navToggle()"
+                class="tac-icon-btn text-on-surface/50 hover:text-primary"
+                title="CLOSE" aria-label="Close navigation">
+          <span class="material-symbols-outlined text-[18px]"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">close</span>
+        </button>
+      </div>
+
+      <div class="flex-1 min-h-0 overflow-y-auto">
+        {# A / B inputs — fill by tapping the map (arm with the target button) or
+           by typing coordinates. The armed field reads signal-orange. #}
+        <div class="p-3 flex flex-col gap-2 border-b border-outline-variant/20">
+          <template x-for="f in [{slot:'a', ph:'START — TAP MAP OR LAT,LON'}, {slot:'b', ph:'DEST — TAP MAP OR LAT,LON'}]" :key="f.slot">
+            <div class="flex items-stretch border"
+                 :class="navPick===f.slot ? 'border-primary-container/60 bg-primary-container/5' : 'border-outline-variant/30'">
+              <span class="flex items-center justify-center w-9 font-headline text-[13px] font-bold flex-shrink-0"
+                    :class="navPick===f.slot ? 'text-primary-container' : 'text-on-surface-variant'"
+                    x-text="f.slot.toUpperCase()"></span>
+              <input type="text"
+                     :value="f.slot==='a' ? aText : bText"
+                     @input="f.slot==='a' ? aText = $event.target.value : bText = $event.target.value"
+                     @focus="navPick = f.slot"
+                     @keydown.enter="navGo()"
+                     :placeholder="f.ph"
+                     autocomplete="off"
+                     :aria-label="f.slot==='a' ? 'Start point' : 'Destination'"
+                     class="flex-1 min-w-0 bg-transparent px-2 font-body text-[11px] tabular-nums text-on-surface placeholder:text-on-surface/30 focus:outline-none">
+              <button type="button" @click="navArm(f.slot)"
+                      class="tac-icon-btn !min-w-0 w-11 border-l border-outline-variant/30"
+                      :class="navPick===f.slot ? 'text-primary-container' : 'text-on-surface/40 hover:text-primary'"
+                      title="PICK_ON_MAP" :aria-label="'Pick ' + (f.slot==='a' ? 'start' : 'destination') + ' on map'">
+                <span class="material-symbols-outlined text-[18px]"
+                      style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">my_location</span>
+              </button>
+            </div>
+          </template>
+        </div>
+
+        {# Travel-mode selector. Active mode is the only orange element here. #}
+        <div class="p-3 border-b border-outline-variant/20">
+          <div class="grid grid-cols-3 gap-px bg-outline-variant/20 border border-outline-variant/30">
+            <template x-for="m in [{k:'walk',i:'directions_walk',l:'WALK'},{k:'bike',i:'directions_bike',l:'BIKE'},{k:'car',i:'directions_car',l:'CAR'}]" :key="m.k">
+              <button type="button" @click="profile = m.k"
+                      class="tac-btn flex-col gap-1 !min-h-[56px] font-headline text-[9px] font-bold uppercase tracking-[0.1em]"
+                      :class="profile===m.k ? 'bg-primary-container text-on-primary' : 'bg-surface-container text-on-surface-variant hover:bg-surface-container-high'"
+                      :aria-pressed="profile===m.k">
+                <span class="material-symbols-outlined text-[20px]"
+                      style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20" x-text="m.i"></span>
+                <span x-text="m.l"></span>
+              </button>
+            </template>
+          </div>
+        </div>
+
+        {# Primary action + clear. NAVIGATE is the panel's single primary CTA. #}
+        <div class="p-3 flex gap-2 border-b border-outline-variant/20">
+          <button type="button" @click="navGo()" :disabled="routeLoading"
+                  class="tac-btn flex-1 gap-2 bg-primary-container text-on-primary font-headline text-[11px] font-bold uppercase tracking-[0.1em] disabled:opacity-50 disabled:cursor-not-allowed">
+            <span class="material-symbols-outlined text-[18px]"
+                  style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
+                  x-text="routeLoading ? 'more_horiz' : 'near_me'"></span>
+            <span x-text="routeLoading ? 'ROUTING…' : 'NAVIGATE'"></span>
+          </button>
+          <button type="button" @click="navClear()"
+                  class="tac-icon-btn border border-outline-variant/30 text-on-surface/50 hover:text-primary"
+                  title="CLEAR" aria-label="Clear route">
+            <span class="material-symbols-outlined text-[18px]"
+                  style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">backspace</span>
+          </button>
+        </div>
+
+        {# Result: summary + turn-by-turn list. #}
+        <template x-if="route">
+          <div>
+            <div class="px-3 py-3 flex items-end gap-6 border-b border-outline-variant/20">
+              <div class="flex flex-col">
+                <span class="font-headline text-[20px] font-bold text-on-surface tabular-nums leading-none"
+                      x-text="fmtKm(route.summary.length_km)"></span>
+                <span class="font-label text-[9px] uppercase tracking-[0.14em] text-on-surface/40 mt-1.5">DISTANCE</span>
+              </div>
+              <div class="flex flex-col">
+                <span class="font-headline text-[20px] font-bold text-primary-container tabular-nums leading-none"
+                      x-text="fmtDuration(route.summary.time_s)"></span>
+                <span class="font-label text-[9px] uppercase tracking-[0.14em] text-on-surface/40 mt-1.5">EST_TIME</span>
+              </div>
+            </div>
+            <ol class="flex flex-col">
+              <template x-for="(mv, idx) in route.maneuvers" :key="idx">
+                <li class="flex items-start gap-3 px-3 py-2.5 border-b border-outline-variant/10">
+                  <span class="material-symbols-outlined text-[18px] text-on-surface-variant flex-shrink-0 mt-0.5"
+                        style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
+                        x-text="maneuverIcon(mv.type)"></span>
+                  <span class="flex-1 min-w-0 font-body text-[12px] text-on-surface leading-snug" x-text="mv.instruction"></span>
+                  <span x-show="mv.length_km > 0"
+                        class="font-label text-[9px] uppercase tracking-[0.1em] text-on-surface/40 tabular-nums flex-shrink-0 mt-1"
+                        x-text="fmtKm(mv.length_km)"></span>
+                </li>
+              </template>
+            </ol>
+          </div>
+        </template>
+
+        {# Empty state — teaches the interface rather than saying "nothing here". #}
+        <template x-if="!route && !routeLoading">
+          <div class="px-6 py-8 flex flex-col items-center gap-3 text-center">
+            <span class="material-symbols-outlined text-[30px] text-on-surface/20"
+                  style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">alt_route</span>
+            <p class="font-body text-[11px] text-on-surface/40 leading-relaxed max-w-[15rem]">
+              Set point A and point B, then choose a mode and hit NAVIGATE.
+            </p>
+          </div>
+        </template>
       </div>
     </div>
   </div>

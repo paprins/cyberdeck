@@ -6,6 +6,7 @@
 *.tar.gz
 data/zim/
 data/maps/
+data/routing/
 data/downloads/
 data/cache/
 data/content/

@@ -15,6 +15,60 @@ def test_module_id_rejects_path_traversal():
             )
 
 
+def _mod(**kw) -> Module:
+    base = dict(
+        id="m", display_name="x", category="medical", description="",
+        latest_version="1", size_gb=0, checksum="sha256:abc",
+    )
+    base.update(kw)
+    return Module(**base)
+
+
+def test_category_accepts_all_canonical_slugs():
+    from app.categories import CATEGORY_SLUGS
+    for slug in CATEGORY_SLUGS:
+        assert _mod(category=slug).category == slug
+
+
+def test_category_migrates_legacy_values():
+    assert _mod(category="maps").category == "navigation"
+    assert _mod(category="library").category == "reference"
+    assert _mod(category="internet").category == "reference"
+    assert _mod(category="packages").category == "reference"
+
+
+def test_category_rejects_unknown_value():
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        _mod(category="not-a-real-category")
+
+
+def test_legacy_category_round_trips_through_json():
+    # A pre-existing registry.json with a legacy category must still load.
+    raw = (
+        '{"modules": [{"id": "m", "display_name": "x", "category": "maps",'
+        ' "description": "", "latest_version": "1", "size_gb": 0,'
+        ' "kind": "mbtiles", "checksum": "sha256:abc"}], "libraries": []}'
+    )
+    reg = Registry.model_validate_json(raw)
+    assert reg.modules[0].category == "navigation"
+
+
+def test_routing_module_requires_checksum():
+    from pydantic import ValidationError
+    with pytest.raises(ValidationError):
+        Module(
+            id="nl-routing", display_name="NL Routing", category="navigation",
+            description="", latest_version="1", size_gb=0.5, kind="routing",
+        )
+
+
+def test_routing_module_links_to_region():
+    m = _mod(kind="routing", routing_for="netherlands")
+    assert m.kind == "routing"
+    assert m.routing_for == "netherlands"
+
+
 def test_module_defaults():
     m = Module(
         id="medical-wikimed",

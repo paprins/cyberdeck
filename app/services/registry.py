@@ -51,6 +51,9 @@ def merge_remote_manifest(
                 "installed_version": current.installed_version,
                 "installed_checksum": current.installed_checksum,
                 "active": current.active,
+                # The category was assigned by the user in the import wizard; a
+                # later library refresh must not revert it to the manifest value.
+                "category": current.category,
             }
             # Preserve the locally-resolved bundled image (set at install time
             # by _resolve_bundled_image) when the manifest doesn't ship an

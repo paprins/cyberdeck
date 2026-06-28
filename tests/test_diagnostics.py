@@ -35,8 +35,8 @@ async def test_read_diagnostics_returns_all_fields(tmp_settings, monkeypatch):
     assert isinstance(d.active_modules, int)
     assert isinstance(d.total_modules, int)
     assert isinstance(d.updates_available, int)
-    assert len(d.services) == 3
-    assert {s.name for s in d.services} == {"kiwix", "mbtileserver", "cyberdeck"}
+    assert len(d.services) == 4
+    assert {s.name for s in d.services} == {"kiwix", "mbtileserver", "valhalla", "cyberdeck"}
 
 
 async def test_read_diagnostics_probes_use_settings_ports(tmp_settings, monkeypatch):
@@ -52,6 +52,7 @@ async def test_read_diagnostics_probes_use_settings_ports(tmp_settings, monkeypa
         ("cyberdeck", tmp_settings.app_port),
         ("kiwix", tmp_settings.kiwix_port),
         ("mbtileserver", tmp_settings.mbtiles_port),
+        ("valhalla", tmp_settings.valhalla_port),
     ]
 
 
@@ -115,7 +116,7 @@ async def test_diagnostics_endpoint_returns_all_keys(client, monkeypatch):
         "temp_c", "services",
     ):
         assert key in body, f"missing {key}"
-    assert len(body["services"]) == 3
+    assert len(body["services"]) == 4
 
 
 # ── GET /settings/status ──────────────────────────────────────────────────────

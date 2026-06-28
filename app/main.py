@@ -10,7 +10,11 @@ from app.config import Settings
 from app.services.connectivity import connectivity_probe_loop, make_default_probe
 from app.services.notifications import services_probe_loop
 from app.services.registry import load_registry
-from app.services.packages import init_kiwix_library, reconcile_kiwix_library
+from app.services.packages import (
+    init_kiwix_library,
+    reconcile_active_routing,
+    reconcile_kiwix_library,
+)
 
 _STATIC_DIR = Path(__file__).parent / "static"
 
@@ -23,12 +27,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        for d in (cfg.zim_dir, cfg.maps_dir, cfg.downloads_dir,
+        for d in (cfg.zim_dir, cfg.maps_dir, cfg.routing_dir, cfg.downloads_dir,
                   cfg.registry_path.parent, cfg.images_dir, cfg.content_dir,
                   cfg.cache_dir):
             d.mkdir(parents=True, exist_ok=True)
         init_kiwix_library(cfg)
         reconcile_kiwix_library(cfg)
+        reconcile_active_routing(cfg)
         probe_task = asyncio.create_task(services_probe_loop(cfg))
         connectivity_task = asyncio.create_task(
             connectivity_probe_loop(cfg, make_default_probe(cfg))
@@ -94,6 +99,9 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     from app.routers import map_viewer as map_viewer_router
     app.include_router(map_viewer_router.make_router(cfg))
+
+    from app.routers import routing as routing_router
+    app.include_router(routing_router.make_router(cfg))
 
     from app.routers import proxy as proxy_router
     app.include_router(proxy_router.make_router(cfg))

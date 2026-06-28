@@ -29,6 +29,7 @@ from app.models.library import (
     LibraryUnreachableError,
     ValidateResult,
 )
+from app.categories import coerce_category
 from app.services.libraries import _fetch_bytes
 from app.services.thumbnails import cache_thumbnail
 
@@ -253,7 +254,9 @@ async def resolve_entry(
     return {
         "id": entry.entry_id,
         "display_name": entry.title,
-        "category": entry.category or "library",
+        # User-assigned in the import wizard (carried on LibraryEntry.category);
+        # coerced so an unknown/legacy manifest value can't crash registration.
+        "category": coerce_category(entry.category),
         "description": entry.summary or "",
         "latest_version": entry.version,
         "size_gb": size_gb,

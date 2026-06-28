@@ -172,6 +172,7 @@ async def read_diagnostics(cfg: Settings) -> Diagnostics:
         services = await asyncio.gather(
             _probe("kiwix", cfg.kiwix_port, client),
             _probe("mbtileserver", cfg.mbtiles_port, client),
+            _probe("valhalla", cfg.valhalla_port, client),
             _probe("cyberdeck", cfg.app_port, client),
         )
 

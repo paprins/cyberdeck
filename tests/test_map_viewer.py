@@ -76,6 +76,35 @@ async def test_map_viewer_renders(client, tmp_settings):
     assert "measure-line" in r.text  # GeoJSON source/layer id
 
 
+async def test_map_viewer_routing_unavailable_by_default(client, tmp_settings):
+    # A plain mbtiles region with no routing module: the nav control must be
+    # gated off so the viewer stays display-only.
+    _seed_mbtiles_module(tmp_settings)
+    r = await client.get("/map/netherlands")
+    assert r.status_code == 200
+    assert "navAvailable: false" in r.text
+
+
+async def test_map_viewer_routing_available_with_active_routing_module(client, tmp_settings):
+    save_registry(tmp_settings, Registry(modules=[
+        Module(
+            id="netherlands", display_name="Netherlands", category="navigation",
+            description="NL", latest_version="1", size_gb=0.8,
+            kind="mbtiles", checksum="sha256:abc", active=True,
+        ),
+        Module(
+            id="netherlands-routing", display_name="NL Routing", category="navigation",
+            description="routes", latest_version="1", size_gb=0.5,
+            kind="routing", checksum="sha256:def", routing_for="netherlands",
+            installed_version="1", active=True,
+        ),
+    ]))
+    r = await client.get("/map/netherlands")
+    assert r.status_code == 200
+    assert "navAvailable: true" in r.text
+    assert "navGo()" in r.text  # nav panel scaffold rendered
+
+
 async def test_map_viewer_unknown_module_404(client, tmp_settings):
     save_registry(tmp_settings, Registry())
     r = await client.get("/map/missing")
@@ -143,11 +172,13 @@ async def test_style_json_defaults_to_dark(client, tmp_settings):
     assert bg["paint"]["background-color"] == MAP_TOKENS["--color-surface"]
 
 
-# ── Home tile routing ────────────────────────────────────────────────────
+# ── Category tile routing ────────────────────────────────────────────────
 
-async def test_home_tile_links_to_map_viewer(client, tmp_settings):
+async def test_category_tile_links_to_map_viewer(client, tmp_settings):
     _seed_mbtiles_module(tmp_settings)
-    r = await client.get("/")
+    # The map module (category 'maps' migrates to navigation) is reached via its
+    # category page.
+    r = await client.get("/category/navigation")
     assert r.status_code == 200
     # mbtiles modules must link directly to the new viewer, not through /view
     # (which would iframe and double-render the chrome).

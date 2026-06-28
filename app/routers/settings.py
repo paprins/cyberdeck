@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse, Response
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 
+from app.categories import CATEGORIES, CATEGORY_MAP
 from app.config import Settings
 from app.services.connectivity import request_immediate_probe
 from app.services.diagnostics import read_diagnostics
@@ -39,6 +40,12 @@ class ConnectivityCheckBody(BaseModel):
 def make_router(cfg: Settings) -> APIRouter:
     router = APIRouter()
     templates = Jinja2Templates(directory=_TEMPLATE_DIR)
+    # Canonical category set for the packages tab: icon lookup in settings.html
+    # and the dropdown options for the import wizard in _libraries_modal.html.
+    category_ctx = {
+        "CATEGORY_MAP": CATEGORY_MAP,
+        "categories_json": [{"slug": c.slug, "label": c.label} for c in CATEGORIES],
+    }
 
     def _sys_ctx():
         status = read_system_status(cfg)
@@ -110,6 +117,7 @@ def make_router(cfg: Settings) -> APIRouter:
             "storage": storage,
             "libraries": [lib.model_dump() for lib in registry.libraries],
             "has_active_download": bool(_active_tasks),
+            **category_ctx,
             **sys_ctx,
         })
 

@@ -93,6 +93,7 @@
     );
   "
   @keydown.ctrl.k.window.prevent="document.getElementById('search') && document.getElementById('search').focus()"
+  @dropdown-open.window="if ($event.detail.id !== 'wifi') wifi_panel_open = false; if ($event.detail.id !== 'connectivity') connectivity_panel_open = false"
 >
 
   <!-- ── Header ── -->
@@ -109,14 +110,14 @@
           <div class="text-base sm:text-xl font-bold text-primary-container tracking-tighter font-headline uppercase leading-none truncate">
             SURVIVAL_DASHBOARD
           </div>
-          <div class="hidden sm:block text-[8px] font-label tracking-[0.3em] uppercase mt-1 leading-none text-primary-container/60">
+          <div class="hidden sm:block text-[10px] font-label tracking-[0.3em] uppercase mt-1 leading-none text-primary-container/60">
             SECURE_ACCESS // SECTOR_G14
           </div>
         </div>
       </a>
 
       <!-- Search -->
-      <div class="hidden xl:flex items-center bg-surface-container-lowest px-4 py-1.5 gap-3 ml-4 relative border border-outline-variant/20"
+      <div class="hidden xl:flex items-center bg-surface-container-lowest px-4 py-2.5 gap-3 ml-4 relative border border-outline-variant/20"
            x-data="{
              searchQuery: '',
              searchResults: [],
@@ -139,7 +140,7 @@
           @input.debounce.300ms="search()"
           @keydown.escape="searchResults = []; searchOpen = false"
           placeholder="QUERY_DATABASE..."
-          class="bg-transparent border-none focus:ring-0 text-[10px] font-label uppercase tracking-wider w-48 text-on-surface placeholder:opacity-30 outline-none"
+          class="bg-transparent border-none focus:ring-0 text-[13px] font-label uppercase tracking-wider w-56 text-on-surface placeholder:opacity-30 outline-none"
           autocomplete="off"
         >
         <!-- Search results dropdown -->
@@ -174,7 +175,7 @@
                 x-text="batteryIcon()">battery_full</span>
         </span>
         <button type="button"
-                @click="wifi_panel_open = !wifi_panel_open"
+                @click="wifi_panel_open = !wifi_panel_open; $dispatch('dropdown-open', {id: wifi_panel_open ? 'wifi' : 'none'})"
                 :class="wifi_connected ? 'text-tertiary hover:text-primary' : 'hover:text-primary'"
                 :title="wifi_connected ? 'WIFI_CONNECTED' : 'WIFI_DISCONNECTED'"
                 class="tac-icon-btn">
@@ -186,7 +187,7 @@
         <button type="button"
                 x-show="is_online !== null"
                 x-cloak
-                @click="connectivity_panel_open = !connectivity_panel_open"
+                @click="connectivity_panel_open = !connectivity_panel_open; $dispatch('dropdown-open', {id: connectivity_panel_open ? 'connectivity' : 'none'})"
                 :class="is_online ? 'text-success hover:text-primary' : 'text-on-surface/40 hover:text-primary'"
                 :title="is_online ? 'ONLINE' : 'OFFLINE'"
                 class="tac-icon-btn">

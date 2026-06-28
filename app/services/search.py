@@ -4,8 +4,6 @@ import httpx
 from urllib.parse import urlencode
 from app.models.registry import Module
 
-_EXCLUDE_CATEGORIES = {"maps", "packages", "internet"}
-
 
 async def kiwix_suggestions(
     query: str,
@@ -33,7 +31,9 @@ async def search_modules(
     kiwix_port: int,
     client: httpx.AsyncClient,
 ) -> list[dict]:
-    searchable = [m for m in active_modules if m.category not in _EXCLUDE_CATEGORIES]
+    # Only ZIM modules have a kiwix full-text index; maps (mbtiles) and static
+    # packages aren't searchable through kiwix.
+    searchable = [m for m in active_modules if m.kind == "zim"]
     if not searchable:
         return []
 

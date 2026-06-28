@@ -21,3 +21,21 @@ services:
     ports:
       - "127.0.0.1:8081:8081"
     restart: on-failure
+
+  valhalla:
+    image: ghcr.io/nilsnolde/docker-valhalla/valhalla:latest
+    # /custom_files must contain valhalla_tiles.tar — staged by the app as a
+    # same-dir symlink to the active region's {id}.tar. Valhalla loads one extract
+    # at startup and does not hot-reload, so swapping regions restarts this.
+    volumes:
+      - ./data/routing:/custom_files
+    environment:
+      - use_tiles_ignore_pbf=True   # serve the prebuilt tar, never build from PBF
+      - force_rebuild=False
+      - build_tar=False             # tar ships prebuilt; don't rebuild it
+      - serve_tiles=True
+      - tileset_name=valhalla_tiles
+      - server_threads=2
+    ports:
+      - "127.0.0.1:8082:8002"
+    restart: on-failure

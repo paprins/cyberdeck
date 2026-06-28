@@ -37,11 +37,11 @@
   >
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/20">
-      <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-on-surface">CONNECTIVITY</div>
+      <div class="font-headline font-bold text-[13px] uppercase tracking-[0.16em] text-on-surface">CONNECTIVITY</div>
       <button @click="connectivity_panel_open = false"
               class="tac-icon-btn text-on-surface/40 hover:text-on-surface -my-2">
-        <span class="material-symbols-outlined text-[18px]"
-              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">close</span>
+        <span class="material-symbols-outlined text-[22px]"
+              style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">close</span>
       </button>
     </div>
 
@@ -49,11 +49,11 @@
     <div class="px-4 py-4 border-b border-outline-variant/15">
       <div class="flex items-center gap-2">
         <span class="w-2 h-2 flex-shrink-0" :class="stateDotClass(connectivity.last_state)"></span>
-        <span class="font-headline font-bold text-[13px] tracking-[0.08em] uppercase"
+        <span class="font-headline font-bold text-[16px] tracking-[0.08em] uppercase"
               :class="stateClass(connectivity.last_state)"
               x-text="stateLabel(connectivity.last_state)">UNKNOWN</span>
       </div>
-      <div class="font-body text-[10px] text-on-surface/40 tracking-[0.06em] uppercase mt-2">
+      <div class="font-body text-[12px] text-on-surface/45 tracking-[0.06em] uppercase mt-2 leading-relaxed">
         <span x-show="connectivity.last_state === 'online'">Internet reachable from this device.</span>
         <span x-show="connectivity.last_state === 'offline'">No route to probe target. Network may be local-only.</span>
         <span x-show="connectivity.last_state === 'unknown' || !connectivity.last_state">No probe data yet. Connectivity check may be disabled.</span>
@@ -63,18 +63,18 @@
     <!-- Detail grid -->
     <div class="px-4 py-3 space-y-[10px]">
       <div class="flex items-center justify-between gap-3">
-        <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">TARGET</span>
-        <span class="font-body text-[11px] text-on-surface tabular-nums truncate"
+        <span class="font-headline text-[12px] uppercase tracking-[0.16em] text-on-surface/45">TARGET</span>
+        <span class="font-body text-[14px] text-on-surface tabular-nums truncate"
               x-text="connectivity.target || '—'">—</span>
       </div>
       <div class="flex items-center justify-between gap-3">
-        <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">LAST_CHECK</span>
-        <span class="font-body text-[11px] text-on-surface tabular-nums tracking-[0.06em] uppercase"
+        <span class="font-headline text-[12px] uppercase tracking-[0.16em] text-on-surface/45">LAST_CHECK</span>
+        <span class="font-body text-[14px] text-on-surface tabular-nums tracking-[0.06em] uppercase"
               x-text="fmtAge(connectivity.last_checked_at)">NO_DATA</span>
       </div>
       <div class="flex items-center justify-between gap-3">
-        <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">LATENCY</span>
-        <span class="font-body text-[11px] tabular-nums tracking-[0.06em] uppercase"
+        <span class="font-headline text-[12px] uppercase tracking-[0.16em] text-on-surface/45">LATENCY</span>
+        <span class="font-body text-[14px] tabular-nums tracking-[0.06em] uppercase"
               :class="connectivity.last_latency_ms !== null && connectivity.last_state === 'online' ? 'text-on-surface' : 'text-on-surface/40'"
               x-text="connectivity.last_latency_ms !== null && connectivity.last_state === 'online' ? connectivity.last_latency_ms + ' MS' : 'NO_RTT'">NO_RTT</span>
       </div>
@@ -84,7 +84,7 @@
     <div class="border-t border-outline-variant/20 px-4 py-3">
       <a href="/settings"
          @click="connectivity_panel_open = false"
-         class="flex items-center justify-between font-headline text-[10px] uppercase tracking-[0.14em] text-on-surface/60 hover:text-primary-container">
+         class="flex items-center justify-between font-headline text-[13px] uppercase tracking-[0.14em] text-on-surface/60 hover:text-primary-container">
         <span>CONNECTIVITY_SETTINGS</span>
         <span class="material-symbols-outlined text-[14px]"
               style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">chevron_right</span>

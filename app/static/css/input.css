@@ -366,4 +366,25 @@
     box-sizing: border-box;
     pointer-events: none;
   }
+
+  /* Route endpoint markers in the navigation overlay. Sharp lettered squares —
+     start (A) in tactical blue, destination (B) in signal orange (the goal is
+     where attention belongs). pointer-events: none so a tap re-arms through them. */
+  .cd-route-marker {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-headline, "Space Grotesk"), sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--color-surface);
+    border: 1.5px solid var(--color-surface);
+    box-sizing: border-box;
+    pointer-events: none;
+  }
+  .cd-route-marker--a { background-color: var(--color-tertiary-container); }
+  .cd-route-marker--b { background-color: var(--color-primary-container); }
 }

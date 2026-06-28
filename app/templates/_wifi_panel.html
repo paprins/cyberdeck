@@ -98,21 +98,21 @@
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-outline-variant/20">
       {% if embedded %}
-      <div class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">AVAILABLE_NETWORKS</div>
+      <div class="font-headline text-[12px] uppercase tracking-[0.16em] text-on-surface/45">AVAILABLE_NETWORKS</div>
       {% else %}
-      <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-on-surface">WIFI_NETWORKS</div>
+      <div class="font-headline font-bold text-[13px] uppercase tracking-[0.16em] text-on-surface">WIFI_NETWORKS</div>
       {% endif %}
       <div class="flex items-center gap-1">
         <button @click="load()" :disabled="loading"
                 :class="loading ? 'opacity-40 cursor-not-allowed' : 'hover:text-primary'"
                 class="tac-icon-btn text-on-surface/40 -my-2">
-          <span class="material-symbols-outlined text-[18px]"
+          <span class="material-symbols-outlined text-[22px]"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">refresh</span>
         </button>
         {% if not embedded %}
         <button @click="wifi_panel_open = false"
                 class="tac-icon-btn text-on-surface/40 hover:text-on-surface -my-2">
-          <span class="material-symbols-outlined text-[18px]"
+          <span class="material-symbols-outlined text-[22px]"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">close</span>
         </button>
         {% endif %}
@@ -121,13 +121,13 @@
 
     <!-- Empty / loading state -->
     <div x-show="loading && networks.length === 0" x-cloak
-         class="px-4 py-6 font-headline text-[10px] uppercase tracking-[0.16em] text-on-surface/40 text-center">
+         class="px-4 py-6 font-headline text-[12px] uppercase tracking-[0.16em] text-on-surface/45 text-center">
       SCANNING...
     </div>
 
     <!-- Error -->
     <div x-show="error" x-cloak
-         class="px-4 py-3 font-headline text-[10px] tracking-[0.08em] uppercase text-error">
+         class="px-4 py-3 font-headline text-[12px] tracking-[0.08em] uppercase text-error">
       <span x-text="error"></span>
     </div>
 
@@ -139,16 +139,16 @@
           :class="net.in_use ? 'bg-surface-container-low' : 'hover:bg-surface-container-high cursor-pointer'"
           @click="select(net)"
         >
-          <span class="material-symbols-outlined text-[18px] flex-shrink-0"
+          <span class="material-symbols-outlined text-[22px] flex-shrink-0"
                 :class="net.in_use ? 'text-tertiary' : 'text-on-surface/60'"
                 style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
                 x-text="net.security ? 'wifi_lock' : 'wifi'"></span>
 
           <div class="tac-row-title">
-            <div class="font-headline font-bold text-[11px] tracking-[0.04em] uppercase truncate"
+            <div class="font-headline font-bold text-[15px] tracking-[0.04em] uppercase truncate"
                  :class="net.in_use ? 'text-tertiary' : 'text-on-surface'"
                  x-text="net.ssid"></div>
-            <div class="font-body text-[9px] text-on-surface/40 mt-[2px] flex gap-2 uppercase tracking-[0.06em]">
+            <div class="font-body text-[11px] text-on-surface/40 mt-[3px] flex gap-2 uppercase tracking-[0.06em]">
               <span x-text="net.in_use ? 'CONNECTED' : (net.security || 'OPEN')"></span>
               <span x-show="net.saved && !net.in_use" class="text-tertiary">SAVED</span>
               <span x-show="net.channel">CH<span x-text="net.channel"></span></span>
@@ -159,11 +159,11 @@
           <template x-if="net.in_use">
             <div class="tac-row-actions gap-1">
               <button @click.stop="doDisconnect()"
-                      class="tac-btn font-headline text-[9px] font-bold px-3 py-[6px] border text-on-surface/60 border-outline-variant/30 hover:bg-surface-container-high tracking-[0.06em]">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-on-surface/60 border-outline-variant/30 hover:bg-surface-container-high tracking-[0.06em]">
                 DISCONNECT
               </button>
               <button @click.stop="doForget(net.ssid)"
-                      class="tac-btn font-headline text-[9px] font-bold px-3 py-[6px] border text-error border-error/40 hover:bg-error/10 tracking-[0.06em]">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-error border-error/40 hover:bg-error/10 tracking-[0.06em]">
                 FORGET
               </button>
             </div>
@@ -171,7 +171,7 @@
           <template x-if="!net.in_use && net.saved">
             <div class="tac-row-actions">
               <button @click.stop="doForget(net.ssid)"
-                      class="tac-btn font-headline text-[9px] font-bold px-3 py-[6px] border text-error border-error/40 hover:bg-error/10 tracking-[0.06em]">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-error border-error/40 hover:bg-error/10 tracking-[0.06em]">
                 FORGET
               </button>
             </div>
@@ -182,25 +182,25 @@
 
     <!-- Empty -->
     <div x-show="!loading && networks.length === 0 && !error" x-cloak
-         class="px-4 py-6 font-body text-[10px] text-on-surface/40 text-center uppercase tracking-[0.08em]">
+         class="px-4 py-6 font-body text-[12px] text-on-surface/40 text-center uppercase tracking-[0.08em]">
       NO_NETWORKS_FOUND
     </div>
 
     <!-- Add hidden network -->
     <div class="border-t border-outline-variant/20 px-4 py-3">
-      <div class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40 mb-2">ADD_HIDDEN_NETWORK</div>
+      <div class="font-headline text-[12px] uppercase tracking-[0.16em] text-on-surface/45 mb-2">ADD_HIDDEN_NETWORK</div>
       <form @submit.prevent="addHidden()" class="flex gap-2">
         <input
           type="text"
           x-model="hiddenSsid"
           placeholder="SSID"
-          class="flex-1 bg-surface-container-lowest border border-outline-variant/30 px-2 py-[6px] font-body text-[11px] text-on-surface focus:outline-none focus:border-primary-container/50"
+          class="flex-1 bg-surface-container-lowest border border-outline-variant/30 px-3 py-3 font-body text-[14px] text-on-surface focus:outline-none focus:border-primary-container/50"
         >
         <button
           type="submit"
           :disabled="!hiddenSsid.trim()"
           :class="!hiddenSsid.trim() ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-          class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/40 tracking-[0.06em]"
+          class="tac-btn font-headline text-[13px] font-bold px-4 border text-primary-container border-primary-container/40 tracking-[0.06em]"
         >ADD</button>
       </form>
     </div>
@@ -290,22 +290,22 @@
   class="fixed inset-0 z-50 bg-background/88 flex items-center justify-center p-4"
 >
   <div class="bg-surface-container-lowest border border-outline-variant/60 p-6 w-full max-w-sm" @click.stop>
-    <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-primary-container mb-3">CONNECT_TO_NETWORK</div>
-    <div class="font-body text-[13px] text-on-surface mb-1 truncate" x-text="network?.ssid"></div>
-    <div class="font-body text-[10px] text-on-surface/40 mb-4 uppercase tracking-[0.06em]">
+    <div class="font-headline font-bold text-[13px] uppercase tracking-[0.16em] text-primary-container mb-3">CONNECT_TO_NETWORK</div>
+    <div class="font-body text-[16px] font-bold text-on-surface mb-1 truncate" x-text="network?.ssid"></div>
+    <div class="font-body text-[12px] text-on-surface/40 mb-4 uppercase tracking-[0.06em]">
       <span x-text="network?.security || 'OPEN'"></span>
       <span x-show="isHidden" class="ml-2">· HIDDEN</span>
       <span x-show="network?.saved && !isHidden" class="ml-2 text-tertiary">· SAVED</span>
     </div>
 
     <div x-show="needsPassword" x-cloak class="mb-4">
-      <label class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40 block mb-2">PASSWORD</label>
+      <label class="font-headline text-[12px] uppercase tracking-[0.16em] text-on-surface/45 block mb-2">PASSWORD</label>
       <div class="relative">
         <input
           :type="showPw ? 'text' : 'password'"
           x-model="password"
           @keydown.enter="submit()"
-          class="w-full bg-surface-container border border-outline-variant/30 px-3 py-2 pr-10 font-body text-[12px] text-on-surface focus:outline-none focus:border-primary-container/50"
+          class="w-full bg-surface-container border border-outline-variant/30 px-3 py-3 pr-10 font-body text-[14px] text-on-surface focus:outline-none focus:border-primary-container/50"
         >
         <button type="button" @click="showPw = !showPw"
                 class="tac-icon-btn absolute right-0 top-1/2 -translate-y-1/2 text-on-surface/40 hover:text-on-surface">
@@ -326,13 +326,13 @@
 
     <div class="flex gap-3">
       <button @click="open = false"
-              class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">
+              class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">
         CANCEL
       </button>
       <button @click="submit()"
               :disabled="connecting"
               :class="connecting ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-              class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-primary-container/50 text-primary-container">
+              class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-primary-container/50 text-primary-container">
         <span x-show="!connecting">CONNECT</span>
         <span x-show="connecting" x-cloak>CONNECTING...</span>
       </button>

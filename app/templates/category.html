@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block content %}
+<main class="flex-1 overflow-y-auto flex flex-col p-4 sm:p-6 xl:p-8">
+
+  {#-- Breadcrumb + category heading --#}
+  <div class="flex items-center gap-2 mb-4 shrink-0 min-w-0">
+    <a href="/" aria-label="Back to home"
+       class="tac-icon-btn -ml-2 text-on-surface/40 hover:text-primary-container">
+      <span class="material-symbols-outlined text-[20px]"
+            style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">arrow_back</span>
+    </a>
+    <span class="material-symbols-outlined text-primary-container text-[22px] shrink-0"
+          style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">{{ category.icon }}</span>
+    <h2 class="font-headline font-bold text-lg uppercase tracking-tight text-on-surface truncate">
+      {{ category.slug | upper }}
+    </h2>
+    <span class="font-label text-[9px] uppercase tracking-[0.08em] text-on-surface/40 shrink-0 whitespace-nowrap">
+      {{ cards | length }}_MODULE{{ 'S' if cards | length != 1 }}
+    </span>
+  </div>
+
+  {#-- Module grid --#}
+  <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
+
+    {% for card in cards %}
+    {%- set img = card.module.image -%}
+    <a href="{{ card.url }}"
+       class="bg-surface-container flex flex-col cursor-pointer group border-b-2 border-transparent hover:bg-surface-container-high hover:border-primary-container min-h-0 overflow-hidden">
+      {#-- Image --#}
+      <div class="relative overflow-hidden bg-surface-container-high aspect-[3/2]">
+        {% if img %}
+        <img src="{{ img }}"
+             alt="{{ card.module.display_name }}"
+             class="w-full h-full object-cover brightness-75 grayscale group-hover:grayscale-0 transition-none">
+        {% else %}
+        <div class="w-full h-full flex items-center justify-center">
+          <span class="material-symbols-outlined text-on-surface/20 text-5xl"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">{{ category.icon }}</span>
+        </div>
+        {% endif %}
+      </div>
+      {#-- Info --#}
+      <div class="p-3 flex flex-col shrink-0 min-w-0">
+        <div class="flex justify-between items-start mb-1 gap-2">
+          <h4 class="font-headline font-bold text-base uppercase tracking-tight text-on-surface group-hover:text-primary-container leading-tight truncate">
+            {{ card.module.display_name | replace(' ', '_') }}
+          </h4>
+          <span class="material-symbols-outlined text-on-secondary-container text-lg shrink-0"
+                style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24">{{ category.icon }}</span>
+        </div>
+        <p class="text-[11px] text-on-surface/60 font-body mb-2 leading-snug line-clamp-2">
+          {{ card.module.description }}
+        </p>
+        <div class="flex justify-between items-center">
+          <span class="text-[9px] font-label text-on-surface/40 uppercase">{{ card.module.size_gb }}_GB</span>
+          <span class="text-[9px] font-label text-primary-container font-bold">VIEW →</span>
+        </div>
+      </div>
+    </a>
+    {% endfor %}
+
+    {% if not cards %}
+    <div class="col-span-full flex flex-col items-center justify-center text-center py-16 gap-3">
+      <span class="material-symbols-outlined text-5xl text-on-surface/15"
+            style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">{{ category.icon }}</span>
+      <p class="font-headline text-[11px] uppercase tracking-[0.16em] text-on-surface/40">NO_ACTIVE_MODULES</p>
+    </div>
+    {% endif %}
+
+  </div>
+
+</main>
+{% endblock %}

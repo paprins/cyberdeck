@@ -1126,3 +1126,77 @@ async def test_discard_checksum_mismatch_removes_total_sidecar(tmp_settings):
     (tmp_settings.downloads_dir / "medical-wikimed.total").write_text("12345")
     await pkg_service.discard_checksum_mismatch(m, tmp_settings)
     assert not (tmp_settings.downloads_dir / "medical-wikimed.total").exists()
+
+
+# ── routing kind: path + active-extract reconciliation ──────────────────────
+
+def _routing_mod(**overrides) -> Module:
+    return _mod(**{
+        "id": "nl", "display_name": "NL Routing", "category": "navigation",
+        "kind": "routing", "checksum": "sha256:def", "routing_for": "netherlands",
+        "installed_version": "1", "active": True, "download_url": None,
+        **overrides,
+    })
+
+
+def test_final_path_routing(tmp_settings):
+    m = _routing_mod()
+    assert pkg_service._final_path(m, tmp_settings) == tmp_settings.routing_dir / "nl.tar"
+
+
+def test_reconcile_active_routing_stages_symlink(tmp_settings, monkeypatch):
+    restarts = []
+    monkeypatch.setattr(pkg_service, "_restart_valhalla", lambda: restarts.append(True))
+    tmp_settings.routing_dir.mkdir(parents=True, exist_ok=True)
+    (tmp_settings.routing_dir / "nl.tar").write_bytes(b"tiles")
+    _seed(tmp_settings, modules=[_routing_mod()])
+
+    pkg_service.reconcile_active_routing(tmp_settings)
+
+    active = tmp_settings.active_routing_tar
+    assert active.is_symlink()
+    assert active.readlink().name == "nl.tar"
+    assert restarts == [True]
+
+
+def test_reconcile_active_routing_idempotent(tmp_settings, monkeypatch):
+    restarts = []
+    monkeypatch.setattr(pkg_service, "_restart_valhalla", lambda: restarts.append(True))
+    tmp_settings.routing_dir.mkdir(parents=True, exist_ok=True)
+    (tmp_settings.routing_dir / "nl.tar").write_bytes(b"tiles")
+    _seed(tmp_settings, modules=[_routing_mod()])
+
+    pkg_service.reconcile_active_routing(tmp_settings)
+    pkg_service.reconcile_active_routing(tmp_settings)  # already staged → no extra restart
+
+    assert restarts == [True]
+
+
+def test_reconcile_active_routing_unstages_when_none(tmp_settings, monkeypatch):
+    restarts = []
+    monkeypatch.setattr(pkg_service, "_restart_valhalla", lambda: restarts.append(True))
+    tmp_settings.routing_dir.mkdir(parents=True, exist_ok=True)
+    (tmp_settings.routing_dir / "old.tar").write_bytes(b"x")
+    active = tmp_settings.active_routing_tar
+    active.symlink_to("old.tar")
+    _seed(tmp_settings, modules=[])  # no routing modules installed
+
+    pkg_service.reconcile_active_routing(tmp_settings)
+
+    assert not active.is_symlink() and not active.exists()
+    assert restarts == [True]
+
+
+async def test_uninstall_routing_removes_tar_and_unstages(tmp_settings, monkeypatch):
+    monkeypatch.setattr(pkg_service, "_restart_valhalla", lambda: None)
+    tmp_settings.routing_dir.mkdir(parents=True, exist_ok=True)
+    (tmp_settings.routing_dir / "nl.tar").write_bytes(b"tiles")
+    active = tmp_settings.active_routing_tar
+    active.symlink_to("nl.tar")
+    m = _routing_mod()
+    _seed(tmp_settings, modules=[m])
+
+    await pkg_service.uninstall_module(m, tmp_settings)
+
+    assert not (tmp_settings.routing_dir / "nl.tar").exists()
+    assert not active.is_symlink() and not active.exists()

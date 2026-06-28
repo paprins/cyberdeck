@@ -271,7 +271,9 @@ async def test_resolve_entry_returns_module_dict(monkeypatch, tmp_settings):
     assert result["download_url"].startswith("https://mirror1.")
     assert result["source_library_id"] == "lib-1"
     assert result["image"] == "/data-cache/mdwiki_en_all_maxi_2025-11/cover.png"
-    assert result["category"] == "library"
+    # OPDS catalogs carry no category; the wizard assigns one, so the
+    # service-level fallback is the generic reference slug.
+    assert result["category"] == "reference"
 
 
 async def test_resolve_entry_propagates_unreachable(monkeypatch, tmp_settings):

@@ -17,6 +17,7 @@ from app.models.library import (
     LibraryUnreachableError,
     ValidateResult,
 )
+from app.categories import coerce_category
 from app.services.thumbnails import cache_thumbnail
 
 log = logging.getLogger(__name__)
@@ -374,7 +375,9 @@ async def resolve_entry(
     return {
         "id": module_id,
         "display_name": entry.title,
-        "category": "library",
+        # User-assigned in the import wizard (carried on LibraryEntry.category);
+        # OPDS catalogs don't supply one, so this coerces to the reference slug.
+        "category": coerce_category(entry.category),
         "description": entry.summary or "",
         "latest_version": module_id,
         "size_gb": round(size_bytes / (1024 ** 3), 3),

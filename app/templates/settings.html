@@ -2,10 +2,6 @@
 {% from "_wifi_panel.html" import wifi_config %}
 
 {% block content %}
-{% set icons = {
-  'medical': 'medication', 'maps': 'map', 'survival': 'forest', 'food': 'inventory',
-  'encyclopedia': 'menu_book', 'packages': 'inventory_2', 'internet': 'language',
-} %}
 {% set tabs = [
   ('status',   '/settings/status',   'monitor_heart', 'STATUS'),
   ('packages', '/settings/packages', 'inventory_2',   'PACKAGES'),
@@ -13,11 +9,9 @@
 ] %}
 {% macro locked_row(icon, title, desc) -%}
 <div class="flex items-center gap-3 px-3 py-[11px] mb-1 border border-outline-variant/15 opacity-30 cursor-not-allowed select-none">
-  <span class="material-symbols-outlined text-[18px] text-on-surface flex-shrink-0"
-        style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">{{ icon }}</span>
   <div class="flex-1 min-w-0">
-    <div class="font-headline text-[11px] text-on-surface tracking-[0.06em]">{{ title }}</div>
-    <div class="font-body text-[9px] text-on-surface/50 mt-[2px]">{{ desc }}</div>
+    <div class="font-headline text-[15px] font-bold text-on-surface tracking-[0.04em]">{{ title }}</div>
+    <div class="font-body text-[12px] text-on-surface/50 mt-[3px] leading-snug">{{ desc }}</div>
   </div>
   <span class="material-symbols-outlined text-[14px] text-on-surface/50 flex-shrink-0"
         style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 20">lock</span>
@@ -36,9 +30,9 @@
       <a href="{{ href }}"
          role="tab"
          aria-selected="{{ 'true' if is_active else 'false' }}"
-         class="flex items-center justify-center gap-2 sm:gap-2.5 px-3 sm:px-5 py-3 min-h-[48px] -mb-px border-b-2 font-headline text-[10px] tracking-[0.12em] uppercase
+         class="flex items-center justify-center gap-2 sm:gap-2.5 px-4 sm:px-7 py-4 min-h-[56px] -mb-px border-b-2 font-headline text-[13px] tracking-[0.12em] uppercase
                 {% if is_active %}text-primary-container border-primary-container{% else %}text-on-surface/40 border-transparent hover:text-on-surface/65{% endif %}">
-        <span class="material-symbols-outlined text-base flex-shrink-0"
+        <span class="material-symbols-outlined text-xl flex-shrink-0"
               style="font-variation-settings:'FILL' {% if is_active %}1{% else %}0{% endif %},'wght' 400,'GRAD' 0,'opsz' 20">{{ icon }}</span>
         {{ label }}
       </a>
@@ -49,13 +43,13 @@
     <!-- ── Packages panel ── -->
 
     <!-- Storage bar -->
-    <div class="px-3 sm:px-5 py-3 flex items-center gap-3 flex-shrink-0 border-b border-outline-variant/30">
-      <span class="font-headline text-[9px] uppercase tracking-[0.12em] text-on-surface/40 whitespace-nowrap">Storage</span>
-      <div class="flex-1 h-[3px] bg-surface-container-high rounded-full overflow-hidden">
-        <div class="h-full bg-tertiary rounded-full"
+    <div class="px-3 sm:px-5 py-4 flex items-center gap-4 flex-shrink-0 border-b border-outline-variant/30">
+      <span class="font-headline text-[12px] uppercase tracking-[0.14em] text-on-surface/55 whitespace-nowrap">Storage</span>
+      <div class="flex-1 h-[6px] bg-surface-container-high overflow-hidden">
+        <div class="h-full bg-tertiary"
              style="width: {{ [(storage.used_bytes / (storage.used_bytes + storage.free_bytes) * 100) | int, 100] | min }}%"></div>
       </div>
-      <span class="font-body text-[10px] text-on-surface/40 whitespace-nowrap">
+      <span class="font-body text-[12px] text-on-surface/45 tabular-nums whitespace-nowrap">
         {{ "%.0f"|format(storage.used_bytes / 1e9) }} GB · {{ "%.0f"|format(storage.free_bytes / 1e9) }} GB free
       </span>
     </div>
@@ -64,9 +58,9 @@
     <div class="flex-1 lg:overflow-y-auto px-3 sm:px-4 pb-4">
 
       <!-- ── Libraries section ── -->
-      <div class="flex items-center gap-2 pt-4 pb-[6px] font-headline text-[10px] uppercase tracking-[0.14em] font-bold text-tertiary">
+      <div class="flex items-center gap-2 pt-4 pb-2 font-headline text-[13px] uppercase tracking-[0.14em] font-bold text-tertiary">
         LIBRARIES
-        <span class="text-[9px] px-[6px] py-[1px] bg-surface-container-high text-on-surface/40">{{ libraries | length }}</span>
+        <span class="text-[11px] px-2 py-[2px] bg-surface-container-high text-on-surface/40">{{ libraries | length }}</span>
       </div>
 
       <script>
@@ -174,13 +168,11 @@
 
         <!-- Library rows -->
         <template x-for="lib in libraries" :key="lib.id">
-          <div class="tac-row gap-3 px-3 py-[11px] mb-1 border border-outline-variant/15">
-            <span class="material-symbols-outlined text-[18px] text-on-surface flex-shrink-0"
-                  style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">local_library</span>
+          <div class="tac-row gap-3 px-4 py-4 mb-1 border border-outline-variant/15">
             <div class="tac-row-title">
-              <div class="font-headline text-[11px] text-on-surface tracking-[0.06em] truncate"
+              <div class="font-headline text-[15px] font-bold text-on-surface tracking-[0.04em] truncate"
                    x-text="lib.display_name"></div>
-              <div class="font-body text-[9px] text-on-surface/40 mt-[2px] truncate flex gap-2 uppercase tracking-[0.06em]">
+              <div class="font-body text-[11px] text-on-surface/40 mt-[3px] truncate flex gap-2 uppercase tracking-[0.06em]">
                 <span class="text-primary-container/70" x-text="(lib.type || 'opds').toUpperCase()"></span>
                 <template x-if="lib.lang"><span x-text="'LANG:' + lib.lang"></span></template>
                 <span class="text-on-surface/30 truncate" x-text="lib.url"></span>
@@ -191,17 +183,17 @@
                 <button @click="refresh(lib.id)"
                         :disabled="refreshingId === lib.id"
                         :class="refreshingId === lib.id ? 'opacity-40' : 'hover:bg-surface-container-high'"
-                        class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-on-surface/60 border-outline-variant/60 tracking-[0.06em]">
+                        class="tac-btn font-headline text-[13px] font-bold px-4 border text-on-surface/60 border-outline-variant/60 tracking-[0.06em]">
                   <span x-show="refreshingId !== lib.id">REFRESH</span>
                   <span x-show="refreshingId === lib.id" x-cloak>REFRESHING…</span>
                 </button>
               </template>
               <button @click="$dispatch('libraries-modal-open', {id: lib.id, name: lib.display_name})"
-                      class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/40 hover:bg-primary-container/10 tracking-[0.06em]">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-primary-container border-primary-container/40 hover:bg-primary-container/10 tracking-[0.06em]">
                 PICK_FROM_LIBRARY
               </button>
               <button @click="$dispatch('confirm-remove-library', {id: lib.id, name: lib.display_name})"
-                      class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-error border-error/40 tracking-[0.06em] hover:bg-error/10">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-error border-error/40 tracking-[0.06em] hover:bg-error/10">
                 REMOVE
               </button>
             </div>
@@ -217,13 +209,13 @@
         <!-- Add toggle -->
         <button x-show="!addOpen"
                 @click="addOpen = true; preview = null; addError = ''; addUrl = ''; addLang = ''"
-                class="tac-btn w-full font-headline text-[10px] font-bold uppercase tracking-[0.08em] py-[10px] border border-dashed border-primary-container/40 text-primary-container hover:bg-primary-container/10">
+                class="tac-btn w-full font-headline text-[13px] font-bold uppercase tracking-[0.08em] py-4 border border-dashed border-primary-container/40 text-primary-container hover:bg-primary-container/10">
           + ADD_LIBRARY
         </button>
 
         <!-- Add form -->
         <div x-show="addOpen" x-cloak class="border border-outline-variant/30 p-4 mb-1">
-          <div class="font-headline text-[10px] uppercase tracking-[0.16em] text-on-surface/40 mb-3">ADD_LIBRARY</div>
+          <div class="font-headline text-[13px] uppercase tracking-[0.16em] text-on-surface/55 mb-4">ADD_LIBRARY</div>
 
           <div class="flex items-baseline justify-between mb-1 gap-2">
             <label class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40">CATALOG_URL_OR_REPO</label>
@@ -234,14 +226,14 @@
           <input type="text" x-model="addUrl"
                  @input="preview = null; addError = ''"
                  placeholder="https://library.kiwix.org/... · github.com/owner/repo · gitlab.com/owner/repo · codeberg.org/owner/repo"
-                 class="w-full bg-surface-container border border-outline-variant/30 px-3 py-2 font-body text-[11px] text-on-surface focus:outline-none focus:border-primary-container/50 mb-3">
+                 class="w-full bg-surface-container border border-outline-variant/30 px-3 py-3 font-body text-[14px] text-on-surface focus:outline-none focus:border-primary-container/50 mb-3">
 
           <div x-show="detectedType === 'opds'" x-cloak>
             <label class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/40 block mb-1">LANG_FILTER <span class="text-on-surface/20">(optional, ISO 639-3 e.g. nld, eng)</span></label>
             <input type="text" x-model="addLang"
                    placeholder=""
                    maxlength="8"
-                   class="w-32 bg-surface-container border border-outline-variant/30 px-3 py-2 font-body text-[11px] text-on-surface focus:outline-none focus:border-primary-container/50 mb-3">
+                   class="w-32 bg-surface-container border border-outline-variant/30 px-3 py-3 font-body text-[14px] text-on-surface focus:outline-none focus:border-primary-container/50 mb-3">
           </div>
 
           <div x-show="preview" x-cloak class="font-body text-[10px] text-tertiary mb-3 uppercase tracking-[0.06em]">
@@ -258,20 +250,20 @@
             <button @click="validate()"
                     :disabled="!addUrl.trim() || validating"
                     :class="(!addUrl.trim() || validating) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-                    class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/40 tracking-[0.06em]">
+                    class="tac-btn font-headline text-[13px] font-bold px-4 border text-primary-container border-primary-container/40 tracking-[0.06em]">
               <span x-show="!validating">VALIDATE</span>
               <span x-show="validating" x-cloak>VALIDATING…</span>
             </button>
             <button @click="submit()"
                     :disabled="!preview || adding"
                     :class="(!preview || adding) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-                    class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/40 tracking-[0.06em]">
+                    class="tac-btn font-headline text-[13px] font-bold px-4 border text-primary-container border-primary-container/40 tracking-[0.06em]">
               <span x-show="!adding">+ ADD</span>
               <span x-show="adding" x-cloak>ADDING…</span>
             </button>
             <span class="flex-1"></span>
             <button @click="addOpen = false"
-                    class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-on-surface/40 border-outline-variant/30 tracking-[0.06em] hover:bg-surface-container-high">
+                    class="tac-btn font-headline text-[13px] font-bold px-4 border text-on-surface/40 border-outline-variant/30 tracking-[0.06em] hover:bg-surface-container-high">
               CANCEL
             </button>
           </div>
@@ -281,9 +273,9 @@
 
       <!-- ── Installed section ── -->
       {% if installed %}
-      <div class="flex items-center gap-2 pt-4 pb-[6px] font-headline text-[10px] uppercase tracking-[0.14em] font-bold text-tertiary">
+      <div class="flex items-center gap-2 pt-4 pb-2 font-headline text-[13px] uppercase tracking-[0.14em] font-bold text-tertiary">
         INSTALLED
-        <span class="text-[9px] px-[6px] py-[1px] bg-surface-container-high text-on-surface/40">{{ installed | length }}</span>
+        <span class="text-[11px] px-2 py-[2px] bg-surface-container-high text-on-surface/40">{{ installed | length }}</span>
       </div>
       {% for m in installed %}
       {% set s = module_statuses[m.id] %}
@@ -337,29 +329,29 @@
           }
         }"
       >
-        <span class="material-symbols-outlined text-[18px] w-7 text-center flex-shrink-0"
-              style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 20">{{ icons.get(m.category, 'folder') }}</span>
+        <span class="material-symbols-outlined text-[24px] w-9 text-center flex-shrink-0 text-on-surface/70"
+              style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">{{ CATEGORY_MAP[m.category].icon if m.category in CATEGORY_MAP else 'folder' }}</span>
 
         <!-- Downloading -->
         <div class="tac-row-title" x-show="status === 'downloading'" x-cloak>
-          <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
+          <div class="font-headline font-bold text-[15px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
           <div class="h-[3px] bg-surface-container-high rounded-full mt-[6px] overflow-hidden">
             <div class="h-full bg-primary-container rounded-full" :style="'width:' + pct + '%'"></div>
           </div>
-          <div class="font-body text-[10px] text-on-surface/40 mt-[3px]"
+          <div class="font-body text-[12px] text-on-surface/40 mt-[4px]"
                x-text="(bytes_dl/1e9).toFixed(1) + ' GB of ' + (total/1e9).toFixed(1) + ' GB · ' + pct + '%'"></div>
         </div>
 
         <!-- Queued -->
         <div class="tac-row-title" x-show="status === 'queued'" x-cloak>
-          <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
-          <div class="font-body text-[10px] text-on-surface/40 mt-[2px]">QUEUED · {{ "%.1f"|format(m.size_gb) }} GB</div>
+          <div class="font-headline font-bold text-[15px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
+          <div class="font-body text-[12px] text-on-surface/40 mt-[2px]">QUEUED · {{ "%.1f"|format(m.size_gb) }} GB</div>
         </div>
 
         <!-- Interrupted -->
         <div class="tac-row-title" x-show="status === 'interrupted'" x-cloak>
-          <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
-          <div class="font-body text-[10px] text-primary-container mt-[2px]"
+          <div class="font-headline font-bold text-[15px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
+          <div class="font-body text-[12px] text-primary-container mt-[2px]"
                x-text="'⚠ INTERRUPTED · ' + (bytes_dl/1e9).toFixed(1) + ' GB of ' + (total/1e9).toFixed(1) + ' GB'"></div>
         </div>
 
@@ -373,8 +365,8 @@
 
         <!-- Installed -->
         <div class="tac-row-title" x-show="status === 'installed' || status === 'not_installed'" x-cloak>
-          <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
-          <div class="font-body text-[10px] text-on-surface/40 mt-[2px]">
+          <div class="font-headline font-bold text-[15px] text-on-surface truncate tracking-[0.04em] uppercase">{{ m.display_name | replace(' ', '_') }}</div>
+          <div class="font-body text-[12px] text-on-surface/40 mt-[2px]">
             {{ "%.1f"|format(m.size_gb) }} GB · v{{ m.installed_version }}{% if m.has_update %}
             <span class="text-primary-container">→ v{{ m.latest_version }}</span>{% endif %}
           </div>
@@ -384,18 +376,18 @@
         <div class="tac-row-actions gap-[6px]">
           <template x-if="status === 'downloading' || status === 'queued'">
             <button @click="act('/api/packages/{{ m.id }}/cancel')"
-                    class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-on-surface/40 border-outline-variant/30">
+                    class="tac-btn font-headline text-[13px] font-bold px-4 border text-on-surface/40 border-outline-variant/30">
               CANCEL
             </button>
           </template>
           <template x-if="status === 'interrupted'">
             <div class="flex gap-[6px]">
               <button @click="act('/api/packages/{{ m.id }}/install')"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-primary-container border-primary-container/40">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-primary-container border-primary-container/40">
                 RESUME
               </button>
               <button @click="$dispatch('confirm-delete', {id: '{{ m.id }}', name: '{{ m.display_name }}'})"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-error border-error/40">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-error border-error/40">
                 REMOVE
               </button>
             </div>
@@ -403,11 +395,11 @@
           <template x-if="status === 'checksum_mismatch'">
             <div class="flex gap-[6px]">
               <button @click="act('/api/packages/{{ m.id }}/accept-checksum')"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-primary-container border-primary-container/40">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-primary-container border-primary-container/40">
                 ACCEPT
               </button>
               <button @click="act('/api/packages/{{ m.id }}/discard-checksum')"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-error border-error/40">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-error border-error/40">
                 DISCARD
               </button>
             </div>
@@ -416,23 +408,23 @@
             <div class="flex gap-[6px]">
               {% if m.has_update %}
               <button @click="act('/api/packages/{{ m.id }}/install')"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-primary-container border-primary-container/50 bg-primary-container/10">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-primary-container border-primary-container/50 bg-primary-container/10">
                 UPDATE
               </button>
               {% endif %}
               {% if m.active %}
               <button @click="act('/api/packages/{{ m.id }}/deactivate')"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-tertiary border-tertiary/40">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-tertiary border-tertiary/40">
                 ACTIVE
               </button>
               {% else %}
               <button @click="act('/api/packages/{{ m.id }}/activate')"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-on-surface/40 border-outline-variant/30">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-on-surface/40 border-outline-variant/30">
                 ACTIVATE
               </button>
               {% endif %}
               <button @click="$dispatch('confirm-delete', {id: '{{ m.id }}', name: '{{ m.display_name }}'})"
-                      class="tac-btn font-headline text-[10px] font-bold px-2 py-[4px] border text-error border-error/40">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-error border-error/40">
                 REMOVE
               </button>
             </div>
@@ -457,17 +449,17 @@
       class="fixed inset-0 z-50 bg-background/88 flex items-center justify-center p-4"
     >
       <div class="bg-surface-container-lowest border border-outline-variant/60 p-6 w-full max-w-xs">
-        <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-primary-container mb-3">REMOVE_LIBRARY</div>
-        <p class="font-body text-[12px] text-on-surface/60 mb-6"
+        <div class="font-headline font-bold text-[13px] uppercase tracking-[0.16em] text-primary-container mb-3">REMOVE_LIBRARY</div>
+        <p class="font-body text-[14px] text-on-surface/70 mb-6 leading-relaxed"
            x-text="'Remove ' + libraryName + '? Installed packages from this library stay on the device, but updates will no longer be tracked.'"></p>
         <div class="flex gap-3">
           <button
             @click="open = false"
-            class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high"
+            class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high"
           >CANCEL</button>
           <button
             @click="fetch('/api/libraries/' + libraryId, {method:'DELETE'}).then(() => { open = false; location.reload(); })"
-            class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-error/50 text-error hover:bg-error/10"
+            class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-error/50 text-error hover:bg-error/10"
           >REMOVE</button>
         </div>
       </div>
@@ -484,17 +476,17 @@
       class="fixed inset-0 z-50 bg-background/88 flex items-center justify-center p-4"
     >
       <div class="bg-surface-container-lowest border border-outline-variant/60 p-6 w-full max-w-xs">
-        <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-primary-container mb-3">REMOVE_PACKAGE</div>
-        <p class="font-body text-[12px] text-on-surface/60 mb-6"
+        <div class="font-headline font-bold text-[13px] uppercase tracking-[0.16em] text-primary-container mb-3">REMOVE_PACKAGE</div>
+        <p class="font-body text-[14px] text-on-surface/70 mb-6 leading-relaxed"
            x-text="'Remove ' + moduleName + '? This deletes the downloaded files and cannot be undone.'"></p>
         <div class="flex gap-3">
           <button
             @click="open = false"
-            class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high"
+            class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high"
           >CANCEL</button>
           <button
             @click="fetch('/api/packages/' + moduleId + '/uninstall', {method:'POST'}).then(() => { open = false; location.reload(); })"
-            class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-error/50 text-error hover:bg-error/10"
+            class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-error/50 text-error hover:bg-error/10"
           >REMOVE</button>
         </div>
       </div>
@@ -604,8 +596,8 @@
 
       <!-- Panel header: title + refresh controls -->
       <div class="flex-shrink-0 border-b border-outline-variant/30 px-3 sm:px-5 py-3 sm:py-4 flex flex-wrap items-center gap-2 sm:gap-3">
-        <div class="font-headline font-bold text-[13px] uppercase tracking-[0.14em] text-on-surface flex-1">DEVICE_STATUS</div>
-        <span class="hidden sm:inline font-label text-[9px] text-on-surface/40 tracking-[0.08em] uppercase tabular-nums">
+        <div class="font-headline font-bold text-[16px] uppercase tracking-[0.14em] text-on-surface flex-1">DEVICE_STATUS</div>
+        <span class="hidden sm:inline font-label text-[11px] text-on-surface/40 tracking-[0.08em] uppercase tabular-nums">
           LAST_AT <span x-text="lastRefreshedAt ? new Date(lastRefreshedAt).toUTCString().split(' ')[4] : '—'">—</span>
         </span>
         <button @click="autoRefresh = !autoRefresh"
@@ -613,13 +605,13 @@
                   ? 'text-primary-container border-primary-container/50 bg-primary-container/10'
                   : 'text-on-surface/40 border-outline-variant/30 hover:bg-surface-container-high'"
                 :aria-pressed="autoRefresh"
-                class="tac-btn font-headline text-[10px] font-bold tracking-[0.06em] uppercase px-3 py-[6px] border">
+                class="tac-btn font-headline text-[13px] font-bold tracking-[0.06em] uppercase px-5 border">
           <span x-text="(autoRefresh ? '● ' : '○ ') + 'AUTO_10S'">○ AUTO_10S</span>
         </button>
         <button @click="refresh()"
                 :disabled="loading"
                 :class="loading ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-                class="tac-btn font-headline text-[10px] font-bold tracking-[0.06em] uppercase px-3 py-[6px] border text-primary-container border-primary-container/40">
+                class="tac-btn font-headline text-[13px] font-bold tracking-[0.06em] uppercase px-5 border text-primary-container border-primary-container/40">
           <span x-show="!loading">↻ REFRESH</span>
           <span x-show="loading" x-cloak>LOADING…</span>
         </button>
@@ -629,7 +621,7 @@
       <div class="flex-1 lg:overflow-y-auto px-3 sm:px-5 pb-6">
 
         <!-- ── VITAL_SIGNS ────────────────────────────────────────── -->
-        <div class="flex items-center gap-2 pt-5 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-primary-container">
+        <div class="flex items-center gap-2 pt-5 pb-3 font-headline text-[12px] uppercase tracking-[0.2em] text-primary-container">
           <span class="w-1 h-1 bg-primary-container"></span>
           VITAL_SIGNS
           <span class="flex-1 h-px bg-outline-variant/20 ml-1"></span>
@@ -637,163 +629,117 @@
 
         <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <!-- CORE_TEMP -->
-          <div class="bg-surface-container p-4 border border-outline-variant/15"
-               role="meter"
-               :aria-valuenow="data.temp_c"
-               aria-valuemin="0" aria-valuemax="100"
+          <div class="bg-surface-container p-4 lg:p-5 border border-outline-variant/15"
+               role="meter" :aria-valuenow="data.temp_c" aria-valuemin="0" aria-valuemax="100"
                aria-label="Core temperature in Celsius">
-            <div class="flex items-center gap-1.5 mb-3">
-              <span class="material-symbols-outlined text-[14px] text-on-surface/35"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">thermostat</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">CORE_TEMP</span>
-            </div>
-            <div class="flex items-baseline gap-1.5 mb-3">
-              <span class="font-headline font-bold text-[28px] tabular-nums leading-none"
+            <div class="font-headline text-[13px] uppercase tracking-[0.14em] text-on-surface/55 mb-3">CORE_TEMP</div>
+            <div class="flex items-baseline gap-2 mb-3">
+              <span class="font-headline font-bold text-[46px] tabular-nums leading-none"
                     :class="toneValue(tempState().tone)"
                     x-text="data.temp_c !== null ? fmtNum(data.temp_c, 1) : '—'">—</span>
-              <span class="font-label text-[10px] text-on-surface/40 tracking-[0.06em] uppercase">°C</span>
+              <span class="font-label text-[14px] text-on-surface/45 tracking-[0.04em] uppercase">°C</span>
             </div>
-            <div class="flex gap-[2px] mb-2">
-              <template x-for="i in 10" :key="i">
-                <div class="flex-1 h-[8px]"
-                     :class="i <= tempState().fill ? toneBg(tempState().tone) : 'bg-surface-container-high'"></div>
-              </template>
+            <div class="h-2 bg-surface-container-high mb-2.5">
+              <div class="h-full" :class="toneBg(tempState().tone)" :style="'width:' + (tempState().fill * 10) + '%'"></div>
             </div>
-            <div class="font-label text-[9px] font-bold tracking-[0.14em] uppercase"
-                 :class="toneLabel(tempState().tone)"
-                 x-text="tempState().label">NOMINAL</div>
+            <div class="font-label text-[12px] font-bold tracking-[0.14em] uppercase"
+                 :class="toneLabel(tempState().tone)" x-text="tempState().label">NOMINAL</div>
           </div>
 
           <!-- CPU_LOAD -->
-          <div class="bg-surface-container p-4 border border-outline-variant/15"
-               role="meter"
-               :aria-valuenow="data.loadavg_1m"
-               aria-valuemin="0" aria-valuemax="5"
+          <div class="bg-surface-container p-4 lg:p-5 border border-outline-variant/15"
+               role="meter" :aria-valuenow="data.loadavg_1m" aria-valuemin="0" aria-valuemax="5"
                aria-label="CPU load average">
-            <div class="flex items-center gap-1.5 mb-3">
-              <span class="material-symbols-outlined text-[14px] text-on-surface/35"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">speed</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">CPU_LOAD</span>
-              <span class="ml-auto font-body text-[9px] text-on-surface/35 tabular-nums">
-                5M_<span x-text="fmtNum(data.loadavg_5m, 2)">—</span>
-              </span>
+            <div class="font-headline text-[13px] uppercase tracking-[0.14em] text-on-surface/55 mb-3">CPU_LOAD</div>
+            <div class="flex items-baseline gap-2 mb-3">
+              <span class="font-headline font-bold text-[46px] tabular-nums leading-none"
+                    :class="toneValue(loadState().tone)" x-text="fmtNum(data.loadavg_1m, 2)">—</span>
+              <span class="font-label text-[14px] text-on-surface/45 tracking-[0.04em] uppercase">1M</span>
             </div>
-            <div class="flex items-baseline gap-1.5 mb-3">
-              <span class="font-headline font-bold text-[28px] tabular-nums leading-none"
-                    :class="toneValue(loadState().tone)"
-                    x-text="fmtNum(data.loadavg_1m, 2)">—</span>
-              <span class="font-label text-[10px] text-on-surface/40 tracking-[0.06em] uppercase">1M_AVG</span>
+            <div class="h-2 bg-surface-container-high mb-2.5">
+              <div class="h-full" :class="toneBg(loadState().tone)" :style="'width:' + (loadState().fill * 10) + '%'"></div>
             </div>
-            <div class="flex gap-[2px] mb-2">
-              <template x-for="i in 10" :key="i">
-                <div class="flex-1 h-[8px]"
-                     :class="i <= loadState().fill ? toneBg(loadState().tone) : 'bg-surface-container-high'"></div>
-              </template>
-            </div>
-            <div class="font-label text-[9px] font-bold tracking-[0.14em] uppercase"
-                 :class="toneLabel(loadState().tone)"
-                 x-text="loadState().label">NOMINAL</div>
+            <div class="font-label text-[12px] font-bold tracking-[0.14em] uppercase"
+                 :class="toneLabel(loadState().tone)" x-text="loadState().label">NOMINAL</div>
           </div>
 
           <!-- MEMORY -->
-          <div class="bg-surface-container p-4 border border-outline-variant/15"
-               role="meter"
-               :aria-valuenow="memState().pct"
-               aria-valuemin="0" aria-valuemax="100"
+          <div class="bg-surface-container p-4 lg:p-5 border border-outline-variant/15"
+               role="meter" :aria-valuenow="memState().pct" aria-valuemin="0" aria-valuemax="100"
                aria-label="Memory usage percentage">
-            <div class="flex items-center gap-1.5 mb-3">
-              <span class="material-symbols-outlined text-[14px] text-on-surface/35"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">memory</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">MEMORY</span>
-              <span class="ml-auto font-body text-[9px] text-on-surface/35 tabular-nums"
-                    x-text="data.mem_total_kb ? fmtBytes(data.mem_total_kb * 1024) : '—'">—</span>
+            <div class="flex items-baseline justify-between mb-3">
+              <span class="font-headline text-[13px] uppercase tracking-[0.14em] text-on-surface/55">MEMORY</span>
+              <span class="font-body text-[11px] text-on-surface/35 tabular-nums"
+                    x-text="data.mem_total_kb ? fmtBytes(data.mem_total_kb * 1024) : ''"></span>
             </div>
-            <div class="flex items-baseline gap-1.5 mb-3">
-              <span class="font-headline font-bold text-[28px] tabular-nums leading-none"
+            <div class="flex items-baseline gap-2 mb-3">
+              <span class="font-headline font-bold text-[46px] tabular-nums leading-none"
                     :class="toneValue(memState().tone)"
                     x-text="memState().pct !== null ? Math.round(memState().pct) : '—'">—</span>
-              <span class="font-label text-[10px] text-on-surface/40 tracking-[0.06em] uppercase">% USED</span>
+              <span class="font-label text-[14px] text-on-surface/45 tracking-[0.04em] uppercase">% USED</span>
             </div>
-            <div class="flex gap-[2px] mb-2">
-              <template x-for="i in 10" :key="i">
-                <div class="flex-1 h-[8px]"
-                     :class="i <= memState().fill ? toneBg(memState().tone) : 'bg-surface-container-high'"></div>
-              </template>
+            <div class="h-2 bg-surface-container-high mb-2.5">
+              <div class="h-full" :class="toneBg(memState().tone)" :style="'width:' + (memState().fill * 10) + '%'"></div>
             </div>
-            <div class="font-label text-[9px] font-bold tracking-[0.14em] uppercase"
-                 :class="toneLabel(memState().tone)"
-                 x-text="memState().label">NOMINAL</div>
+            <div class="font-label text-[12px] font-bold tracking-[0.14em] uppercase"
+                 :class="toneLabel(memState().tone)" x-text="memState().label">NOMINAL</div>
           </div>
 
           <!-- STORAGE -->
-          <div class="bg-surface-container p-4 border border-outline-variant/15"
-               role="meter"
-               :aria-valuenow="diskState().pct"
-               aria-valuemin="0" aria-valuemax="100"
+          <div class="bg-surface-container p-4 lg:p-5 border border-outline-variant/15"
+               role="meter" :aria-valuenow="diskState().pct" aria-valuemin="0" aria-valuemax="100"
                aria-label="Storage usage percentage">
-            <div class="flex items-center gap-1.5 mb-3">
-              <span class="material-symbols-outlined text-[14px] text-on-surface/35"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">database</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">STORAGE</span>
-              <span class="ml-auto font-body text-[9px] text-on-surface/35 tabular-nums"
-                    x-text="fmtBytes(data.storage_total_bytes)">—</span>
+            <div class="flex items-baseline justify-between mb-3">
+              <span class="font-headline text-[13px] uppercase tracking-[0.14em] text-on-surface/55">STORAGE</span>
+              <span class="font-body text-[11px] text-on-surface/35 tabular-nums"
+                    x-text="fmtBytes(data.storage_total_bytes)"></span>
             </div>
-            <div class="flex items-baseline gap-1.5 mb-3">
-              <span class="font-headline font-bold text-[28px] tabular-nums leading-none"
-                    :class="toneValue(diskState().tone)"
-                    x-text="Math.round(diskState().pct)">—</span>
-              <span class="font-label text-[10px] text-on-surface/40 tracking-[0.06em] uppercase">% USED</span>
+            <div class="flex items-baseline gap-2 mb-3">
+              <span class="font-headline font-bold text-[46px] tabular-nums leading-none"
+                    :class="toneValue(diskState().tone)" x-text="Math.round(diskState().pct)">—</span>
+              <span class="font-label text-[14px] text-on-surface/45 tracking-[0.04em] uppercase">% USED</span>
             </div>
-            <div class="flex gap-[2px] mb-2">
-              <template x-for="i in 10" :key="i">
-                <div class="flex-1 h-[8px]"
-                     :class="i <= diskState().fill ? toneBg(diskState().tone) : 'bg-surface-container-high'"></div>
-              </template>
+            <div class="h-2 bg-surface-container-high mb-2.5">
+              <div class="h-full" :class="toneBg(diskState().tone)" :style="'width:' + (diskState().fill * 10) + '%'"></div>
             </div>
-            <div class="font-label text-[9px] font-bold tracking-[0.14em] uppercase"
-                 :class="toneLabel(diskState().tone)"
-                 x-text="diskState().label">NOMINAL</div>
+            <div class="font-label text-[12px] font-bold tracking-[0.14em] uppercase"
+                 :class="toneLabel(diskState().tone)" x-text="diskState().label">NOMINAL</div>
           </div>
         </div>
 
         <!-- ── SERVICES_LINK ──────────────────────────────────────── -->
-        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-primary-container">
+        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[12px] uppercase tracking-[0.2em] text-primary-container">
           <span class="w-1 h-1 bg-primary-container"></span>
           SERVICES_LINK
           <span class="flex-1 h-px bg-outline-variant/20 ml-1"></span>
         </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+        <div class="grid grid-cols-2 lg:grid-cols-4 gap-2">
           <template x-for="svc in data.services" :key="svc.name">
-            <div class="bg-surface-container border px-4 py-3 flex items-center gap-3"
+            <div class="bg-surface-container border px-4 py-4 flex items-center gap-3.5"
                  :class="svc.state === 'ok' ? 'border-outline-variant/15' : 'border-error/40'">
-              <!-- Status block (tactical LED) -->
-              <div class="flex-shrink-0 flex flex-col gap-[2px]">
-                <div class="w-2.5 h-2.5"
-                     :class="svc.state === 'ok' ? 'bg-tertiary' : 'bg-error'"></div>
-                <div class="w-2.5 h-[3px]"
-                     :class="svc.state === 'ok' ? 'bg-tertiary/30' : 'bg-error/40'"></div>
+              <!-- Tactical status LED -->
+              <div class="flex-shrink-0 flex flex-col gap-[3px]">
+                <div class="w-3 h-3" :class="svc.state === 'ok' ? 'bg-tertiary' : 'bg-error'"></div>
+                <div class="w-3 h-[4px]" :class="svc.state === 'ok' ? 'bg-tertiary/30' : 'bg-error/40'"></div>
               </div>
-              <!-- Identity -->
+              <!-- Name + state -->
               <div class="flex-1 min-w-0">
-                <div class="font-headline text-[12px] font-bold tracking-[0.08em] uppercase truncate"
-                     x-text="svc.name.toUpperCase() + '_SERVE'">—</div>
-                <div class="font-body text-[9px] text-on-surface/40 truncate tabular-nums" x-text="svc.url">—</div>
-              </div>
-              <!-- State + latency -->
-              <div class="text-right flex-shrink-0">
-                <div class="font-label text-[11px] font-bold tracking-[0.14em] uppercase"
+                <div class="font-headline text-[15px] font-bold tracking-[0.06em] uppercase truncate"
+                     x-text="svc.name.toUpperCase()">—</div>
+                <div class="font-label text-[12px] font-bold tracking-[0.12em] uppercase mt-[3px]"
                      :class="svc.state === 'ok' ? 'text-tertiary' : 'text-error'"
                      x-text="svc.state === 'ok' ? 'LINKED' : 'OFFLINE'">—</div>
-                <div class="font-body text-[10px] text-on-surface/40 tabular-nums mt-[1px]"
-                     x-text="svc.latency_ms !== null ? svc.latency_ms + ' MS' : 'NO_RTT'">—</div>
               </div>
+              <!-- Latency -->
+              <div class="flex-shrink-0 font-body text-[13px] text-on-surface/45 tabular-nums"
+                   x-text="svc.latency_ms !== null ? svc.latency_ms + ' MS' : '—'">—</div>
             </div>
           </template>
         </div>
 
         <!-- ── CONNECTIVITY ───────────────────────────────────────── -->
-        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-primary-container">
+        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[12px] uppercase tracking-[0.2em] text-primary-container">
           <span class="w-1 h-1 bg-primary-container"></span>
           CONNECTIVITY
           <span class="flex-1 h-px bg-outline-variant/20 ml-1"></span>
@@ -802,62 +748,52 @@
         <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
 
           <!-- WIFI -->
-          <div class="bg-surface-container border border-outline-variant/15 p-3">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="material-symbols-outlined text-[14px]"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
-                    :class="data.wifi_state === 'ASSOCIATED' ? 'text-tertiary' : 'text-on-surface/35'"
-                    x-text="data.wifi_state === 'ASSOCIATED' ? 'wifi' : 'wifi_off'">wifi</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">WIFI</span>
-              <span class="ml-auto font-label text-[11px] font-bold tracking-[0.14em] uppercase"
-                    :class="data.wifi_state === 'ASSOCIATED' ? 'text-tertiary' : data.wifi_state === 'SCANNING' ? 'text-primary-container' : 'text-on-surface/40'"
+          <div class="bg-surface-container border border-outline-variant/15 p-4">
+            <div class="flex items-center justify-between mb-2.5">
+              <span class="font-headline text-[13px] uppercase tracking-[0.14em] text-on-surface/55">WIFI</span>
+              <span class="font-label text-[15px] font-bold tracking-[0.1em] uppercase"
+                    :class="data.wifi_state === 'ASSOCIATED' ? 'text-tertiary' : data.wifi_state === 'SCANNING' ? 'text-primary-container' : 'text-on-surface/45'"
                     x-text="data.wifi_state">—</span>
             </div>
-            <div class="font-headline text-[13px] font-bold tracking-[0.04em] text-on-surface leading-none mb-1 truncate"
+            <div class="font-headline text-[17px] font-bold tracking-[0.02em] text-on-surface leading-tight truncate"
                  x-text="data.wifi_ssid || '—'">—</div>
-            <div class="font-body text-[9px] text-on-surface/40 tabular-nums tracking-[0.06em] uppercase"
-                 x-text="(data.wifi_signal_pct !== null ? data.wifi_signal_pct + '% ' : '') + (data.wifi_channel !== null ? '· CH_' + data.wifi_channel : '')">—</div>
+            <div class="font-body text-[11px] text-on-surface/40 tabular-nums tracking-[0.04em] uppercase mt-1"
+                 x-show="data.wifi_signal_pct !== null || data.wifi_channel !== null"
+                 x-text="(data.wifi_signal_pct !== null ? data.wifi_signal_pct + '%' : '') + (data.wifi_channel !== null ? ' · CH_' + data.wifi_channel : '')"></div>
           </div>
 
           <!-- LAN -->
-          <div class="bg-surface-container border border-outline-variant/15 p-3">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="material-symbols-outlined text-[14px]"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
-                    :class="data.lan_state === 'LINKED' ? 'text-tertiary' : 'text-on-surface/35'">lan</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">LAN</span>
-              <span class="ml-auto font-label text-[11px] font-bold tracking-[0.14em] uppercase"
-                    :class="data.lan_state === 'LINKED' ? 'text-tertiary' : 'text-on-surface/40'"
+          <div class="bg-surface-container border border-outline-variant/15 p-4">
+            <div class="flex items-center justify-between mb-2.5">
+              <span class="font-headline text-[13px] uppercase tracking-[0.14em] text-on-surface/55">LAN</span>
+              <span class="font-label text-[15px] font-bold tracking-[0.1em] uppercase"
+                    :class="data.lan_state === 'LINKED' ? 'text-tertiary' : 'text-on-surface/45'"
                     x-text="data.lan_state">—</span>
             </div>
-            <div class="font-headline text-[13px] font-bold tracking-[0.04em] text-on-surface leading-none mb-1"
-                 x-text="data.lan_iface || '—'">—</div>
-            <div class="font-body text-[9px] text-on-surface/40 tabular-nums tracking-[0.06em] uppercase"
-                 x-text="data.lan_ip || 'NO_IP'">—</div>
+            <div class="font-headline text-[17px] font-bold tracking-[0.02em] text-on-surface leading-tight truncate"
+                 x-text="data.lan_ip || data.lan_iface || '—'">—</div>
+            <div class="font-body text-[11px] text-on-surface/40 tabular-nums tracking-[0.04em] uppercase mt-1"
+                 x-show="data.lan_ip && data.lan_iface" x-text="data.lan_iface"></div>
           </div>
 
           <!-- WAN -->
-          <div class="bg-surface-container border border-outline-variant/15 p-3">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="material-symbols-outlined text-[14px]"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20"
-                    :class="data.wan_state === 'REACHABLE' ? 'text-tertiary' : data.wan_state === 'UNREACHABLE' ? 'text-error' : 'text-on-surface/35'"
-                    x-text="data.wan_state === 'REACHABLE' ? 'public' : 'public_off'">public</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">WAN</span>
-              <span class="ml-auto font-label text-[11px] font-bold tracking-[0.14em] uppercase"
-                    :class="data.wan_state === 'REACHABLE' ? 'text-tertiary' : data.wan_state === 'UNREACHABLE' ? 'text-error' : 'text-on-surface/40'"
+          <div class="bg-surface-container border border-outline-variant/15 p-4">
+            <div class="flex items-center justify-between mb-2.5">
+              <span class="font-headline text-[13px] uppercase tracking-[0.14em] text-on-surface/55">WAN</span>
+              <span class="font-label text-[15px] font-bold tracking-[0.1em] uppercase"
+                    :class="data.wan_state === 'REACHABLE' ? 'text-tertiary' : data.wan_state === 'UNREACHABLE' ? 'text-error' : 'text-on-surface/45'"
                     x-text="data.wan_state">—</span>
             </div>
-            <div class="font-headline text-[13px] font-bold tracking-[0.04em] text-on-surface leading-none mb-1 truncate"
+            <div class="font-headline text-[17px] font-bold tracking-[0.02em] text-on-surface leading-tight truncate"
                  x-text="data.wan_target || '—'">—</div>
-            <div class="font-body text-[9px] text-on-surface/40 tabular-nums tracking-[0.06em] uppercase"
-                 x-text="(data.wan_latency_ms !== null ? data.wan_latency_ms + ' MS · ' : '') + (data.wan_checked_at ? 'CHK_' + Math.max(0, Math.round((Date.now()/1000 - data.wan_checked_at))) + 'S_AGO' : 'NO_DATA')">—</div>
+            <div class="font-body text-[11px] text-on-surface/40 tabular-nums tracking-[0.04em] uppercase mt-1"
+                 x-show="data.wan_latency_ms !== null" x-text="data.wan_latency_ms + ' MS'"></div>
           </div>
 
         </div>
 
         <!-- ── HOST_TELEMETRY ─────────────────────────────────────── -->
-        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[9px] uppercase tracking-[0.18em] text-primary-container">
+        <div class="flex items-center gap-2 pt-6 pb-3 font-headline text-[12px] uppercase tracking-[0.2em] text-primary-container">
           <span class="w-1 h-1 bg-primary-container"></span>
           HOST_TELEMETRY
           <span class="flex-1 h-px bg-outline-variant/20 ml-1"></span>
@@ -865,76 +801,39 @@
 
         <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
           <!-- UPTIME -->
-          <div class="bg-surface-container p-3 border border-outline-variant/15">
-            <div class="flex items-center gap-1.5 mb-2">
-              <span class="material-symbols-outlined text-[14px] text-on-surface/35"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">schedule</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">UPTIME</span>
-            </div>
-            <div class="font-headline text-[18px] font-bold tabular-nums tracking-[0.04em] text-on-surface leading-none"
+          <div class="bg-surface-container border border-outline-variant/15 px-4 py-3.5">
+            <div class="font-headline text-[11px] uppercase tracking-[0.14em] text-on-surface/45 mb-2">UPTIME</div>
+            <div class="font-headline text-[20px] font-bold tabular-nums tracking-[0.02em] text-on-surface leading-none"
                  x-text="fmtUptime(data.uptime_s)">—</div>
-            <div class="font-label text-[9px] tracking-[0.12em] uppercase text-on-surface/30 mt-2">
-              SINCE_BOOT
+          </div>
+
+          <!-- MODULES -->
+          <div class="bg-surface-container border border-outline-variant/15 px-4 py-3.5">
+            <div class="font-headline text-[11px] uppercase tracking-[0.14em] text-on-surface/45 mb-2">MODULES</div>
+            <div class="flex items-baseline gap-1.5 leading-none">
+              <span class="font-headline text-[20px] font-bold tabular-nums text-on-surface" x-text="data.active_modules">—</span>
+              <span class="font-label text-[12px] text-on-surface/40 tracking-[0.04em]">/ <span x-text="data.total_modules">—</span></span>
+              <span x-show="data.updates_available > 0"
+                    class="ml-auto font-label text-[12px] font-bold tracking-[0.08em] uppercase text-primary-container"
+                    x-text="'↑' + data.updates_available">—</span>
             </div>
           </div>
 
           <!-- BRIGHTNESS -->
-          <div class="bg-surface-container p-3 border border-outline-variant/15">
-            <div class="flex items-center gap-1.5 mb-2">
-              <span class="material-symbols-outlined text-[14px] text-on-surface/35"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">brightness_high</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">BRIGHTNESS</span>
-            </div>
+          <div class="bg-surface-container border border-outline-variant/15 px-4 py-3.5">
+            <div class="font-headline text-[11px] uppercase tracking-[0.14em] text-on-surface/45 mb-2">BRIGHTNESS</div>
             <div class="flex items-baseline gap-1 leading-none">
-              <span class="font-headline text-[18px] font-bold tabular-nums tracking-[0.04em] text-on-surface"
+              <span class="font-headline text-[20px] font-bold tabular-nums text-on-surface"
                     x-text="data.brightness_pct !== null ? data.brightness_pct : '—'">—</span>
-              <span class="font-label text-[9px] text-on-surface/40 tracking-[0.06em] uppercase">%</span>
+              <span x-show="data.brightness_pct !== null" class="font-label text-[12px] text-on-surface/40">%</span>
             </div>
-            <div class="flex gap-[2px] mt-2.5" x-show="data.brightness_pct !== null">
-              <template x-for="i in 10" :key="i">
-                <div class="flex-1 h-[3px]"
-                     :class="i <= Math.round(data.brightness_pct / 10) ? 'bg-on-surface/55' : 'bg-surface-container-high'"></div>
-              </template>
-            </div>
-            <div class="font-label text-[9px] tracking-[0.12em] uppercase text-on-surface/30 mt-2" x-show="data.brightness_pct === null">
-              NO_BACKLIGHT
-            </div>
-          </div>
-
-          <!-- MODULES -->
-          <div class="bg-surface-container p-3 border border-outline-variant/15">
-            <div class="flex items-center gap-1.5 mb-2">
-              <span class="material-symbols-outlined text-[14px] text-on-surface/35"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">inventory_2</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">MODULES</span>
-            </div>
-            <div class="flex items-baseline gap-1 leading-none">
-              <span class="font-headline text-[18px] font-bold tabular-nums tracking-[0.04em] text-on-surface"
-                    x-text="data.active_modules">—</span>
-              <span class="font-label text-[10px] text-on-surface/40 tracking-[0.06em]">
-                / <span x-text="data.total_modules">—</span> ACTIVE
-              </span>
-            </div>
-            <div class="font-label text-[9px] font-bold tracking-[0.12em] uppercase mt-2"
-                 :class="data.updates_available > 0 ? 'text-primary-container' : 'text-on-surface/30'"
-                 x-text="data.updates_available > 0
-                   ? '↑ ' + data.updates_available + ' UPDATE' + (data.updates_available !== 1 ? 'S' : '') + '_AVAILABLE'
-                   : 'ALL_CURRENT'">ALL_CURRENT</div>
           </div>
 
           <!-- FIRMWARE -->
-          <div class="bg-surface-container p-3 border border-outline-variant/15">
-            <div class="flex items-center gap-1.5 mb-2">
-              <span class="material-symbols-outlined text-[14px] text-on-surface/35"
-                    style="font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 20">system_update</span>
-              <span class="font-headline text-[9px] uppercase tracking-[0.16em] text-on-surface/45">FIRMWARE</span>
-            </div>
-            <div class="font-headline text-[18px] font-bold tabular-nums tracking-[0.04em] text-on-surface leading-none"
-                 x-text="data.firmware_version ? 'v' + data.firmware_version : 'UNKNOWN'">—</div>
-            <div class="font-label text-[9px] tracking-[0.12em] uppercase text-on-surface/30 mt-2">
-              <span x-show="data.firmware_version">CHANNEL_STABLE</span>
-              <span x-show="!data.firmware_version">DEV_BUILD</span>
-            </div>
+          <div class="bg-surface-container border border-outline-variant/15 px-4 py-3.5">
+            <div class="font-headline text-[11px] uppercase tracking-[0.14em] text-on-surface/45 mb-2">FIRMWARE</div>
+            <div class="font-headline text-[20px] font-bold tabular-nums tracking-[0.02em] text-on-surface leading-none"
+                 x-text="data.firmware_version ? 'v' + data.firmware_version : 'DEV'">—</div>
           </div>
         </div>
 
@@ -952,7 +851,7 @@
     <!-- Settings rows -->
     <div class="flex-1 lg:overflow-y-auto px-3 sm:px-4 pb-4">
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">NOTIFICATIONS</div>
+      <div class="pt-5 pb-2 font-headline text-[12px] uppercase tracking-[0.16em] text-primary-container">NOTIFICATIONS</div>
 
       <div class="tac-row gap-3 px-3 py-[11px] mb-1 border border-outline-variant/15"
            x-data="{
@@ -975,11 +874,9 @@
                finally { this.saving = false; setTimeout(() => this.error = '', 3000); }
              }
            }">
-        <span class="material-symbols-outlined text-[18px] text-on-surface flex-shrink-0"
-              style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">notifications_active</span>
         <div class="tac-row-title">
-          <div class="font-headline text-[11px] text-on-surface tracking-[0.06em]">CHECK_FOR_UPDATES</div>
-          <div class="font-body text-[9px] text-on-surface/50 mt-[2px]">
+          <div class="font-headline text-[15px] font-bold text-on-surface tracking-[0.04em]">CHECK_FOR_UPDATES</div>
+          <div class="font-body text-[12px] text-on-surface/50 mt-[3px] leading-snug">
             Notify when package or firmware updates are available (online only)
             <span x-show="error" x-cloak class="text-error ml-2" x-text="error"></span>
           </div>
@@ -990,7 +887,7 @@
                   :class="enabled
                     ? 'text-tertiary border-tertiary/50'
                     : 'text-on-surface/40 border-outline-variant/30'"
-                  class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border tracking-[0.06em] hover:bg-surface-container">
+                  class="tac-btn font-headline text-[13px] font-bold px-4 border tracking-[0.06em] hover:bg-surface-container">
             <span x-text="enabled ? 'ENABLED' : 'DISABLED'"></span>
           </button>
         </div>
@@ -1017,11 +914,9 @@
                finally { this.saving = false; setTimeout(() => this.error = '', 3000); }
              }
            }">
-        <span class="material-symbols-outlined text-[18px] text-on-surface flex-shrink-0"
-              style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">public</span>
         <div class="tac-row-title">
-          <div class="font-headline text-[11px] text-on-surface tracking-[0.06em]">CONNECTIVITY_CHECK</div>
-          <div class="font-body text-[9px] text-on-surface/50 mt-[2px]">
+          <div class="font-headline text-[15px] font-bold text-on-surface tracking-[0.04em]">CONNECTIVITY_CHECK</div>
+          <div class="font-body text-[12px] text-on-surface/50 mt-[3px] leading-snug">
             Periodically check if internet is reachable. Auto-disables after sustained loss.
             <span x-show="error" x-cloak class="text-error ml-2" x-text="error"></span>
           </div>
@@ -1032,22 +927,22 @@
                   :class="enabled
                     ? 'text-tertiary border-tertiary/50'
                     : 'text-on-surface/40 border-outline-variant/30'"
-                  class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border tracking-[0.06em] hover:bg-surface-container">
+                  class="tac-btn font-headline text-[13px] font-bold px-4 border tracking-[0.06em] hover:bg-surface-container">
             <span x-text="enabled ? 'ENABLED' : 'DISABLED'"></span>
           </button>
         </div>
       </div>
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">DISPLAY</div>
+      <div class="pt-5 pb-2 font-headline text-[12px] uppercase tracking-[0.16em] text-primary-container">DISPLAY</div>
 
       {{ locked_row('brightness_high', 'DISPLAY_BRIGHTNESS', 'Adjust screen brightness (10–100%)') }}
       {{ locked_row('timer', 'AUTO_DIM_TIMEOUT', 'Screen auto-dim delay in seconds') }}
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">NETWORK</div>
+      <div class="pt-5 pb-2 font-headline text-[12px] uppercase tracking-[0.16em] text-primary-container">NETWORK</div>
 
       {{ wifi_config(embedded=true) }}
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">FIRMWARE</div>
+      <div class="pt-5 pb-2 font-headline text-[12px] uppercase tracking-[0.16em] text-primary-container">FIRMWARE</div>
 
       <script>
         window.__upgradeInitial = {
@@ -1131,11 +1026,9 @@
              }
            }">
         <div class="tac-row gap-3">
-          <span class="material-symbols-outlined text-[18px] text-on-surface flex-shrink-0"
-                style="font-variation-settings:'FILL' 0,'wght' 300,'GRAD' 0,'opsz' 24">system_update</span>
           <div class="tac-row-title">
-            <div class="font-headline text-[11px] text-on-surface tracking-[0.06em]">FIRMWARE_UPDATE</div>
-            <div class="font-body text-[9px] text-on-surface/50 mt-[2px]">
+            <div class="font-headline text-[15px] font-bold text-on-surface tracking-[0.04em]">FIRMWARE_UPDATE</div>
+            <div class="font-body text-[12px] text-on-surface/50 mt-[3px] leading-snug">
               Current: <span x-text="current ? 'v' + current : 'unknown'"></span>
               <template x-if="status.phase !== 'idle' && !inFlight">
                 <span class="ml-2"
@@ -1148,21 +1041,21 @@
             <template x-if="!inFlight">
               <button @click="check()" :disabled="checking"
                       :class="checking ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-                      class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-primary-container border-primary-container/40 tracking-[0.06em]">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-primary-container border-primary-container/40 tracking-[0.06em]">
                 <span x-show="!checking">CHECK</span>
                 <span x-show="checking" x-cloak>...</span>
               </button>
             </template>
             <template x-if="(status.phase === 'failed' || status.phase === 'rolled_back') && !inFlight">
               <button @click="cancel()"
-                      class="tac-btn font-headline text-[10px] font-bold px-3 py-[6px] border text-on-surface/40 border-outline-variant/30 tracking-[0.06em]">
+                      class="tac-btn font-headline text-[13px] font-bold px-4 border text-on-surface/40 border-outline-variant/30 tracking-[0.06em]">
                 DISMISS
               </button>
             </template>
           </div>
         </div>
 
-        <div x-show="checkError" x-cloak class="font-headline text-[10px] tracking-[0.08em] text-error mt-2 uppercase">
+        <div x-show="checkError" x-cloak class="font-headline text-[12px] tracking-[0.08em] text-error mt-2 uppercase">
           <span x-text="checkError"></span>
         </div>
 
@@ -1184,20 +1077,20 @@
 
             <template x-if="!hasUpdate">
               <div>
-                <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-tertiary mb-3">FIRMWARE_UP_TO_DATE</div>
-                <p class="font-body text-[12px] text-on-surface/60 mb-6">
+                <div class="font-headline font-bold text-[13px] uppercase tracking-[0.16em] text-tertiary mb-3">FIRMWARE_UP_TO_DATE</div>
+                <p class="font-body text-[14px] text-on-surface/70 mb-6 leading-relaxed">
                   You're running the latest version<span x-show="current"> (v<span x-text="current"></span>)</span>.
                 </p>
                 <div class="flex">
                   <button @click="resultOpen = false"
-                          class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">CLOSE</button>
+                          class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">CLOSE</button>
                 </div>
               </div>
             </template>
 
             <template x-if="hasUpdate">
               <div>
-                <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-primary-container mb-3">FIRMWARE_UPDATE_AVAILABLE</div>
+                <div class="font-headline font-bold text-[13px] uppercase tracking-[0.16em] text-primary-container mb-3">FIRMWARE_UPDATE_AVAILABLE</div>
                 <p class="font-body text-[12px] text-on-surface/60 mb-1">
                   Version v<span x-text="latestRelease?.version"></span> is available. Install now?
                 </p>
@@ -1213,9 +1106,9 @@
                 </a>
                 <div class="flex gap-3">
                   <button @click="resultOpen = false"
-                          class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">CANCEL</button>
+                          class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">CANCEL</button>
                   <button @click="install()"
-                          class="tac-btn flex-1 font-headline text-[10px] uppercase tracking-[0.08em] py-3 border border-primary-container/50 text-primary-container hover:bg-primary-container/10">INSTALL</button>
+                          class="tac-btn flex-1 font-headline text-[13px] uppercase tracking-[0.08em] py-4 border border-primary-container/50 text-primary-container hover:bg-primary-container/10">INSTALL</button>
                 </div>
               </div>
             </template>
@@ -1224,7 +1117,7 @@
         </div>
       </div>
 
-      <div class="pt-4 pb-[6px] font-headline text-[9px] uppercase tracking-[0.16em] text-primary-container">SYSTEM</div>
+      <div class="pt-5 pb-2 font-headline text-[12px] uppercase tracking-[0.16em] text-primary-container">SYSTEM</div>
 
       {{ locked_row('language',    'LANGUAGE',     'System display language') }}
       {{ locked_row('schedule',    'TIMEZONE',     'Device timezone and clock source') }}

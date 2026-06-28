@@ -19,6 +19,16 @@ async def client(app):
         yield c
 
 
+def _module(**kw) -> Module:
+    base = dict(
+        id="medical-wikimed", display_name="Medical Wiki", category="medical",
+        description="Emergency medicine reference", latest_version="2024-01",
+        size_gb=0.8, checksum="sha256:abc", active=True,
+    )
+    base.update(kw)
+    return Module(**base)
+
+
 async def test_home_returns_200(client):
     r = await client.get("/")
     assert r.status_code == 200
@@ -34,75 +44,38 @@ async def test_home_renders_wordmark(client):
     assert "SURVIVAL_DASHBOARD" in r.text
 
 
-async def test_home_import_module_card_always_present(client):
+async def test_home_empty_state_when_no_active_modules(client):
     r = await client.get("/")
-    assert "IMPORT_MODULE" in r.text
-    assert 'href="/settings/packages"' in r.text
+    assert "NO_ACTIVE_MODULES" in r.text
 
 
-async def test_home_shows_active_module_name(client, tmp_settings):
-    reg = Registry(
-        
-        modules=[
-            Module(
-                id="medical-wikimed", display_name="Medical Wiki", category="medical",
-                description="Emergency medicine reference", latest_version="2024-01",
-                size_gb=0.8, checksum="sha256:abc", active=True,
-            )
-        ],
-    )
-    save_registry(tmp_settings, reg)
+async def test_home_shows_category_card_for_active_module(client, tmp_settings):
+    save_registry(tmp_settings, Registry(modules=[_module()]))
     r = await client.get("/")
-    assert "Medical_Wiki" in r.text
+    # Homepage shows category cards, not individual modules.
+    assert 'href="/category/medical"' in r.text
+    assert "MEDICAL" in r.text
 
 
-async def test_home_shows_module_size(client, tmp_settings):
-    reg = Registry(
-        
-        modules=[
-            Module(
-                id="medical-wikimed", display_name="Medical Wiki", category="medical",
-                description="Emergency medicine reference", latest_version="2024-01",
-                size_gb=3.2, checksum="sha256:abc", active=True,
-            )
-        ],
-    )
-    save_registry(tmp_settings, reg)
+async def test_home_does_not_show_module_name(client, tmp_settings):
+    save_registry(tmp_settings, Registry(modules=[_module()]))
     r = await client.get("/")
-    assert "3.2" in r.text
+    assert "Medical_Wiki" not in r.text
 
 
-async def test_home_maps_module_has_viewer_url(client, tmp_settings):
-    reg = Registry(
-        
-        modules=[
-            Module(
-                id="maps-world", display_name="Maps", category="maps", kind="mbtiles",
-                description="OSM", latest_version="2024-01",
-                size_gb=10, checksum="sha256:abc", active=True,
-            )
-        ],
-    )
-    save_registry(tmp_settings, reg)
+async def test_home_category_card_absent_without_active_module(client, tmp_settings):
+    save_registry(tmp_settings, Registry(modules=[_module(active=False)]))
     r = await client.get("/")
-    # mbtiles modules link to the in-cyberdeck map viewer, not the iframe.
-    assert 'href="/map/maps-world"' in r.text
+    assert 'href="/category/medical"' not in r.text
 
 
-async def test_home_medical_module_has_viewer_url(client, tmp_settings):
-    reg = Registry(
-        
-        modules=[
-            Module(
-                id="medical-wikimed", display_name="Medical", category="medical",
-                description="WikiMed", latest_version="2024-01",
-                size_gb=0.8, checksum="sha256:abc", active=True,
-            )
-        ],
-    )
-    save_registry(tmp_settings, reg)
+async def test_home_maps_module_shows_navigation_category(client, tmp_settings):
+    # 'maps' migrates to the navigation category.
+    save_registry(tmp_settings, Registry(modules=[
+        _module(id="maps-world", category="maps", kind="mbtiles", size_gb=10),
+    ]))
     r = await client.get("/")
-    assert 'href="/view?url=/kiwix/content/medical-wikimed/' in r.text
+    assert 'href="/category/navigation"' in r.text
 
 
 async def test_view_route_renders_iframe(client):
@@ -110,19 +83,3 @@ async def test_view_route_renders_iframe(client):
     assert r.status_code == 200
     assert "http://localhost:8080/test/" in r.text
     assert "<iframe" in r.text
-
-
-async def test_home_inactive_modules_not_shown(client, tmp_settings):
-    reg = Registry(
-        
-        modules=[
-            Module(
-                id="medical-wikimed", display_name="Secret Module", category="medical",
-                description="Should not appear", latest_version="2024-01",
-                size_gb=0.8, checksum="sha256:abc", active=False,
-            )
-        ],
-    )
-    save_registry(tmp_settings, reg)
-    r = await client.get("/")
-    assert "Secret Module" not in r.text

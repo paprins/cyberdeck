@@ -15,15 +15,7 @@ def _mod(id: str, category: str, kind: str = "zim") -> Module:
 def test_tile_url_maps():
     # mbtiles modules link directly to the in-cyberdeck map viewer (which
     # extends base.html); wrapping in /view would double-render the chrome.
-    assert _tile_url(_mod("maps-world", "maps", kind="mbtiles")) == "/map/maps-world"
-
-
-def test_tile_url_packages():
-    assert _tile_url(_mod("_packages", "packages")) == "/settings/packages"
-
-
-def test_tile_url_internet():
-    assert _tile_url(_mod("_internet", "internet")) == "/view?url=https://duckduckgo.com"
+    assert _tile_url(_mod("maps-world", "navigation", kind="mbtiles")) == "/map/maps-world"
 
 
 def test_tile_url_kiwix_content():
@@ -31,7 +23,7 @@ def test_tile_url_kiwix_content():
 
 
 def test_tile_url_kiwix_uses_module_id():
-    result = _tile_url(_mod("survival-wikihow", "survival"))
+    result = _tile_url(_mod("survival-wikihow", "reference"))
     assert "survival-wikihow" in result
 
 

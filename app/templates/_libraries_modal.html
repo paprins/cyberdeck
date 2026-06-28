@@ -1,5 +1,7 @@
 <!-- ── Libraries picker modal ──
-     Opened via $dispatch('libraries-modal-open', {id, name}). -->
+     Opened via $dispatch('libraries-modal-open', {id, name}).
+     Two-step wizard: select entries → assign a category to each → install. -->
+<script>window.__categories = {{ categories_json | tojson }};</script>
 <div
   x-data="{
     open: false,
@@ -12,6 +14,9 @@
     loading: false,
     error: '',
     selected: {},
+    step: 'select',
+    categoryAssignments: {},
+    categories: window.__categories || [],
     registering: false,
     regError: '',
     regResult: null,
@@ -20,6 +25,9 @@
     get hasMore() {
       if (this.total === null) return this.entries.length === this.count;
       return this.start + this.count < this.total;
+    },
+    get allAssigned() {
+      return Object.keys(this.selected).every(id => !!this.categoryAssignments[id]);
     },
 
     async loadPage() {
@@ -59,15 +67,30 @@
       this.loadPage();
     },
 
+    goAssign() {
+      const known = new Set(this.categories.map(c => c.slug));
+      // Pre-select the manifest's category when it maps to a known slug.
+      for (const [id, entry] of Object.entries(this.selected)) {
+        if (!this.categoryAssignments[id] && entry.category && known.has(entry.category)) {
+          this.categoryAssignments[id] = entry.category;
+        }
+      }
+      this.regError = '';
+      this.step = 'assign';
+    },
+
     async register() {
       this.registering = true;
       this.regError = '';
       this.regResult = null;
       try {
+        const entries = Object.entries(this.selected).map(
+          ([id, entry]) => ({...entry, category: this.categoryAssignments[id]})
+        );
         const r = await fetch('/api/libraries/' + this.libraryId + '/register', {
           method: 'POST',
           headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify({entries: Object.values(this.selected)})
+          body: JSON.stringify({entries})
         });
         if (!r.ok) {
           const d = await r.json().catch(() => ({}));
@@ -76,6 +99,7 @@
         }
         this.regResult = await r.json();
         this.selected = {};
+        this.categoryAssignments = {};
         if (!this.regResult.failed || this.regResult.failed.length === 0) {
           setTimeout(() => { this.open = false; window.location.reload(); }, 800);
         }
@@ -90,7 +114,8 @@
     libraryId = $event.detail.id;
     libraryName = $event.detail.name;
     entries = []; total = null; start = 0;
-    selected = {}; error = ''; regError = ''; regResult = null;
+    selected = {}; step = 'select'; categoryAssignments = {};
+    error = ''; regError = ''; regResult = null;
     open = true;
     loadPage();
   "
@@ -106,7 +131,10 @@
     <!-- Header -->
     <div class="px-3 sm:px-6 py-4 border-b border-outline-variant/20 flex items-center justify-between flex-shrink-0">
       <div class="min-w-0">
-        <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-primary-container">PICK_FROM_LIBRARY</div>
+        <div class="font-headline font-bold text-[10px] uppercase tracking-[0.16em] text-primary-container">
+          <span x-show="step === 'select'">PICK_FROM_LIBRARY</span>
+          <span x-show="step === 'assign'" x-cloak>ASSIGN_CATEGORY</span>
+        </div>
         <div class="font-body text-[13px] text-on-surface mt-1 truncate" x-text="libraryName"></div>
       </div>
       <button @click="open = false"
@@ -116,70 +144,101 @@
       </button>
     </div>
 
-    <!-- Pagination + count -->
-    <div class="px-3 sm:px-6 py-2 border-b border-outline-variant/15 flex items-center gap-3 text-[10px] font-headline uppercase tracking-[0.08em] text-on-surface/40 flex-shrink-0">
-      <span>
-        <span x-text="start + 1"></span>–<span x-text="Math.min(start + entries.length, total ?? (start + entries.length))"></span>
-        <template x-if="total !== null">
-          <span> of <span x-text="total"></span></span>
-        </template>
-      </span>
-      <span class="flex-1"></span>
-      <button @click="prevPage()" :disabled="start === 0 || loading"
-              :class="(start === 0 || loading) ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-container'"
-              class="tac-btn px-2">
-        ← PREV
-      </button>
-      <button @click="nextPage()" :disabled="!hasMore || loading"
-              :class="(!hasMore || loading) ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-container'"
-              class="tac-btn px-2">
-        NEXT →
-      </button>
-    </div>
+    <!-- ── STEP 1: SELECT ── -->
+    <template x-if="step === 'select'">
+      <div class="flex flex-col min-h-0 flex-1">
 
-    <!-- Error / loading -->
-    <div x-show="error" x-cloak
-         class="px-3 sm:px-6 py-3 font-headline text-[10px] tracking-[0.08em] uppercase text-error flex-shrink-0">
-      <span x-text="error"></span>
-    </div>
-    <div x-show="loading && entries.length === 0" x-cloak
-         class="px-3 sm:px-6 py-10 font-headline text-[10px] uppercase tracking-[0.16em] text-on-surface/40 text-center flex-shrink-0">
-      LOADING…
-    </div>
-
-    <!-- Entry list -->
-    <div class="flex-1 overflow-y-auto">
-      <template x-for="entry in entries" :key="entry.entry_id">
-        <label class="flex items-start gap-3 px-3 sm:px-6 py-3 border-b border-outline-variant/15 hover:bg-surface-container-low cursor-pointer">
-          <input type="checkbox"
-                 :checked="!!selected[entry.entry_id]"
-                 @change="toggle(entry)"
-                 class="mt-1 accent-primary-container">
-          <template x-if="entry.thumbnail_url">
-            <img :src="entry.thumbnail_url" alt=""
-                 class="w-10 h-10 flex-shrink-0 bg-surface-container"
-                 onerror="this.style.display='none'">
-          </template>
-          <div class="flex-1 min-w-0">
-            <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase"
-                 x-text="entry.title.replace(/ /g, '_')"></div>
-            <template x-if="entry.summary">
-              <div class="font-body text-[10px] text-on-surface/60 mt-[2px] line-clamp-2" x-text="entry.summary"></div>
+        <!-- Pagination + count -->
+        <div class="px-3 sm:px-6 py-2 border-b border-outline-variant/15 flex items-center gap-3 text-[10px] font-headline uppercase tracking-[0.08em] text-on-surface/40 flex-shrink-0">
+          <span>
+            <span x-text="start + 1"></span>–<span x-text="Math.min(start + entries.length, total ?? (start + entries.length))"></span>
+            <template x-if="total !== null">
+              <span> of <span x-text="total"></span></span>
             </template>
-            <div class="font-body text-[9px] text-on-surface/40 mt-[3px] flex gap-3 uppercase tracking-[0.06em]">
-              <template x-if="entry.language"><span x-text="entry.language"></span></template>
-              <template x-if="entry.size_bytes">
-                <span x-text="(entry.size_bytes/1e9).toFixed(2) + ' GB'"></span>
+          </span>
+          <span class="flex-1"></span>
+          <button @click="prevPage()" :disabled="start === 0 || loading"
+                  :class="(start === 0 || loading) ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-container'"
+                  class="tac-btn px-2">
+            ← PREV
+          </button>
+          <button @click="nextPage()" :disabled="!hasMore || loading"
+                  :class="(!hasMore || loading) ? 'opacity-30 cursor-not-allowed' : 'hover:text-primary-container'"
+                  class="tac-btn px-2">
+            NEXT →
+          </button>
+        </div>
+
+        <!-- Error / loading -->
+        <div x-show="error" x-cloak
+             class="px-3 sm:px-6 py-3 font-headline text-[10px] tracking-[0.08em] uppercase text-error flex-shrink-0">
+          <span x-text="error"></span>
+        </div>
+        <div x-show="loading && entries.length === 0" x-cloak
+             class="px-3 sm:px-6 py-10 font-headline text-[10px] uppercase tracking-[0.16em] text-on-surface/40 text-center flex-shrink-0">
+          LOADING…
+        </div>
+
+        <!-- Entry list -->
+        <div class="flex-1 overflow-y-auto">
+          <template x-for="entry in entries" :key="entry.entry_id">
+            <label class="flex items-start gap-3 px-3 sm:px-6 py-3 border-b border-outline-variant/15 hover:bg-surface-container-low cursor-pointer">
+              <input type="checkbox"
+                     :checked="!!selected[entry.entry_id]"
+                     @change="toggle(entry)"
+                     class="mt-1 accent-primary-container">
+              <template x-if="entry.thumbnail_url">
+                <img :src="entry.thumbnail_url" alt=""
+                     class="w-10 h-10 flex-shrink-0 bg-surface-container"
+                     onerror="this.style.display='none'">
               </template>
-            </div>
+              <div class="flex-1 min-w-0">
+                <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase"
+                     x-text="entry.title.replace(/ /g, '_')"></div>
+                <template x-if="entry.summary">
+                  <div class="font-body text-[10px] text-on-surface/60 mt-[2px] line-clamp-2" x-text="entry.summary"></div>
+                </template>
+                <div class="font-body text-[9px] text-on-surface/40 mt-[3px] flex gap-3 uppercase tracking-[0.06em]">
+                  <template x-if="entry.language"><span x-text="entry.language"></span></template>
+                  <template x-if="entry.size_bytes">
+                    <span x-text="(entry.size_bytes/1e9).toFixed(2) + ' GB'"></span>
+                  </template>
+                </div>
+              </div>
+            </label>
+          </template>
+          <div x-show="!loading && entries.length === 0 && !error" x-cloak
+               class="px-3 sm:px-6 py-10 font-body text-[10px] text-on-surface/40 text-center uppercase tracking-[0.08em]">
+            NO_ENTRIES
           </div>
-        </label>
-      </template>
-      <div x-show="!loading && entries.length === 0 && !error" x-cloak
-           class="px-3 sm:px-6 py-10 font-body text-[10px] text-on-surface/40 text-center uppercase tracking-[0.08em]">
-        NO_ENTRIES
+        </div>
       </div>
-    </div>
+    </template>
+
+    <!-- ── STEP 2: ASSIGN ── -->
+    <template x-if="step === 'assign'">
+      <div class="flex-1 overflow-y-auto">
+        <div class="px-3 sm:px-6 py-2 border-b border-outline-variant/15 font-headline text-[10px] uppercase tracking-[0.08em] text-on-surface/40 flex-shrink-0">
+          ASSIGN A CATEGORY TO EACH MODULE
+        </div>
+        <template x-for="entry in Object.values(selected)" :key="entry.entry_id">
+          <div class="flex items-center gap-3 px-3 sm:px-6 py-3 border-b border-outline-variant/15">
+            <div class="flex-1 min-w-0">
+              <div class="font-headline font-bold text-[12px] text-on-surface truncate tracking-[0.04em] uppercase"
+                   x-text="entry.title.replace(/ /g, '_')"></div>
+            </div>
+            <select x-model="categoryAssignments[entry.entry_id]"
+                    class="tac-btn shrink-0 w-44 max-w-[45vw] bg-surface-container border px-2 py-2 font-headline text-[11px] uppercase tracking-[0.04em] appearance-none cursor-pointer"
+                    :class="categoryAssignments[entry.entry_id] ? 'border-primary-container/50 text-on-surface' : 'border-outline-variant/40 text-on-surface/40'">
+              <option value="" disabled>— SELECT —</option>
+              <template x-for="c in categories" :key="c.slug">
+                <option :value="c.slug" x-text="c.label" class="bg-surface-container text-on-surface normal-case"></option>
+              </template>
+            </select>
+          </div>
+        </template>
+      </div>
+    </template>
 
     <!-- Install result -->
     <template x-if="regResult">
@@ -211,17 +270,39 @@
         <span x-text="regError"></span>
       </div>
       <span class="flex-1"></span>
-      <button @click="open = false"
-              class="tac-btn font-headline text-[10px] uppercase tracking-[0.08em] px-4 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">
-        CLOSE
-      </button>
-      <button @click="register()"
-              :disabled="registering || selectedCount === 0"
-              :class="(registering || selectedCount === 0) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
-              class="tac-btn font-headline text-[10px] font-bold uppercase tracking-[0.08em] px-4 border border-primary-container/50 text-primary-container">
-        <span x-show="!registering">INSTALL</span>
-        <span x-show="registering" x-cloak>INSTALLING…</span>
-      </button>
+
+      <!-- STEP 1 footer -->
+      <template x-if="step === 'select'">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button @click="open = false"
+                  class="tac-btn font-headline text-[10px] uppercase tracking-[0.08em] px-4 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">
+            CLOSE
+          </button>
+          <button @click="goAssign()"
+                  :disabled="selectedCount === 0"
+                  :class="(selectedCount === 0) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
+                  class="tac-btn font-headline text-[10px] font-bold uppercase tracking-[0.08em] px-4 border border-primary-container/50 text-primary-container">
+            NEXT →
+          </button>
+        </div>
+      </template>
+
+      <!-- STEP 2 footer -->
+      <template x-if="step === 'assign'">
+        <div class="flex items-center gap-2 sm:gap-3">
+          <button @click="step = 'select'"
+                  class="tac-btn font-headline text-[10px] uppercase tracking-[0.08em] px-4 border border-outline-variant/30 text-on-surface/40 hover:bg-surface-container-high">
+            ← BACK
+          </button>
+          <button @click="register()"
+                  :disabled="registering || !allAssigned"
+                  :class="(registering || !allAssigned) ? 'opacity-40 cursor-not-allowed' : 'hover:bg-primary-container/10'"
+                  class="tac-btn font-headline text-[10px] font-bold uppercase tracking-[0.08em] px-4 border border-primary-container/50 text-primary-container">
+            <span x-show="!registering">INSTALL</span>
+            <span x-show="registering" x-cloak>INSTALLING…</span>
+          </button>
+        </div>
+      </template>
     </div>
 
   </div>
